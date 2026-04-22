@@ -1,0 +1,35 @@
+package com.terminplaner.ui.navigation
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.graphics.vector.ImageVector
+
+sealed class Screen(val route: String) {
+    data object Calendar : Screen("calendar")
+    data object AppointmentsList : Screen("appointments_list")
+    data object Settings : Screen("settings")
+    data object AppointmentEdit : Screen("appointment_edit?appointmentId={appointmentId}&selectedDate={selectedDate}") {
+        fun createRoute(appointmentId: Long? = null, selectedDate: Long? = null): String {
+            return "appointment_edit?appointmentId=${appointmentId ?: 0}&selectedDate=${selectedDate ?: 0}"
+        }
+    }
+    data object Trash : Screen("trash")
+    data object CategoriesList : Screen("categories_list")
+    data object CategoryEdit : Screen("category_edit?categoryId={categoryId}") {
+        fun createRoute(categoryId: Long? = null): String {
+            return "category_edit?categoryId=${categoryId ?: 0}"
+        }
+    }
+}
+
+sealed class BottomNavItem(
+    val route: String,
+    val title: String,
+    val icon: ImageVector
+) {
+    data object Calendar : BottomNavItem("calendar", "Kalender", Icons.Default.CalendarToday)
+    data object Appointments : BottomNavItem("appointments_list", "Termine", Icons.Default.Event)
+    data object Settings : BottomNavItem("settings", "Einstellungen", Icons.Default.Settings)
+}
