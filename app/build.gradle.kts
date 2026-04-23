@@ -10,7 +10,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.kaneplarium"
+        applicationId = "com.kaneplarium.terminplaner"
         minSdk = 34
         targetSdk = 34
         versionCode = 5
@@ -20,7 +20,6 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        applicationIdSuffix = "terminplaner"
     }
 
     buildTypes {
