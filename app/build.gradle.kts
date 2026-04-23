@@ -13,8 +13,8 @@ android {
         applicationId = "com.kaneplarium.terminplaner"
         minSdk = 34
         targetSdk = 34
-        versionCode = 3
-        versionName = "2026.1.0.2"
+        versionCode = 4
+        versionName = "2026.1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

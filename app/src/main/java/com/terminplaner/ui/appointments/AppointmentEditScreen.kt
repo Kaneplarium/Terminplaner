@@ -27,8 +27,6 @@ fun AppointmentEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
@@ -43,7 +41,6 @@ fun AppointmentEditScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -89,6 +86,10 @@ fun AppointmentEditScreen(
                 label = { Text("Datum") },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
+                isError = uiState.isPastDateError,
+                supportingText = if (uiState.isPastDateError) {
+                    { Text("Termine in der Vergangenheit sind nicht erlaubt") }
+                } else null,
                 trailingIcon = {
                     IconButton(onClick = { showDatePicker = true }) {
                         Icon(Icons.Default.DateRange, contentDescription = "Datum wählen")
@@ -222,23 +223,31 @@ fun AppointmentEditScreen(
                     Text("Abbrechen")
                 }
                 Button(
-                    onClick = { 
-                        if (uiState.hasOverlap) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = "Hinweis: Dieser Termin überschneidet sich mit einem anderen!",
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        }
-                        viewModel.save() 
-                    },
+                    onClick = { viewModel.onSaveClick() },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Speichern")
                 }
             }
         }
+    }
+
+    if (uiState.showOverlapDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissOverlapDialog() },
+            title = { Text("Termin-Konflikt") },
+            text = { Text("Zu dieser Zeit gibt es bereits einen anderen Termin. Möchtest du die aktuelle Zeit beibehalten oder ändern?") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmOverlapSave() }) {
+                    Text("Beibehalten")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissOverlapDialog() }) {
+                    Text("Ändern")
+                }
+            }
+        )
     }
 
     if (showDatePicker) {

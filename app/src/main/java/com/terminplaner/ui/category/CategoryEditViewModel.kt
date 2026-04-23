@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.terminplaner.domain.model.Category
 import com.terminplaner.domain.repository.CategoryRepository
+import com.terminplaner.util.DataExportManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -22,6 +23,7 @@ data class CategoryEditUiState(
 @HiltViewModel
 class CategoryEditViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository,
+    private val dataExportManager: DataExportManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -73,6 +75,7 @@ class CategoryEditViewModel @Inject constructor(
             } else {
                 categoryRepository.insertCategory(category)
             }
+            dataExportManager.autoExport()
             _uiState.update { it.copy(isSaved = true) }
         }
     }

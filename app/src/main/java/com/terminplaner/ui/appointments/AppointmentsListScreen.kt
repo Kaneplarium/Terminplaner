@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.terminplaner.ui.components.AppTopBar
 import com.terminplaner.ui.components.AppointmentCard
 import com.terminplaner.ui.navigation.Screen
 import java.text.SimpleDateFormat
@@ -21,31 +21,19 @@ import java.util.*
 @Composable
 fun AppointmentsListScreen(
     navController: NavController,
-    onOpenDrawer: () -> Unit,
     viewModel: AppointmentsListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormat = SimpleDateFormat("MMMM yyyy", Locale.GERMAN)
+    
+    var appointmentToDelete by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Termine") },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menü öffnen")
-                    }
-                }
+            AppTopBar(
+                title = "Terminübersicht",
+                navController = navController
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    navController.navigate(Screen.AppointmentEdit.createRoute())
-                }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Neuer Termin")
-            }
         }
     ) { padding ->
         if (uiState.appointments.isEmpty()) {
@@ -96,12 +84,36 @@ fun AppointmentsListScreen(
                                 )
                             },
                             onDelete = {
-                                viewModel.deleteAppointment(appointment.id)
+                                appointmentToDelete = appointment.id
                             }
                         )
                     }
                 }
             }
         }
+    }
+
+    if (appointmentToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { appointmentToDelete = null },
+            title = { Text("Termin löschen") },
+            text = { Text("Möchtest du diesen Termin wirklich löschen?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        appointmentToDelete?.let { viewModel.deleteAppointment(it) }
+                        appointmentToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Löschen")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { appointmentToDelete = null }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
     }
 }

@@ -10,6 +10,7 @@ import com.google.gson.GsonBuilder
 import com.terminplaner.data.preferences.ThemePreferences
 import com.terminplaner.domain.model.Appointment
 import com.terminplaner.domain.model.Category
+import com.terminplaner.domain.model.ExportData
 import com.terminplaner.domain.repository.AppointmentRepository
 import com.terminplaner.domain.repository.CategoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,13 +23,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
-
-data class ExportData(
-    val version: Int = 1,
-    val exportDate: Long = System.currentTimeMillis(),
-    val appointments: List<Appointment> = emptyList(),
-    val categories: List<Category> = emptyList()
-)
 
 data class SettingsUiState(
     val exportSuccess: Boolean = false,

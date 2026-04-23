@@ -8,6 +8,7 @@ import com.terminplaner.domain.model.Category
 import com.terminplaner.domain.repository.AppointmentRepository
 import com.terminplaner.domain.repository.CategoryRepository
 import com.terminplaner.util.AlarmScheduler
+import com.terminplaner.util.DataExportManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -26,7 +27,9 @@ data class AppointmentEditUiState(
     val isEditMode: Boolean = false,
     val isSaved: Boolean = false,
     val titleError: Boolean = false,
-    val hasOverlap: Boolean = false
+    val hasOverlap: Boolean = false,
+    val showOverlapDialog: Boolean = false,
+    val isPastDateError: Boolean = false
 )
 
 @HiltViewModel
@@ -34,6 +37,7 @@ class AppointmentEditViewModel @Inject constructor(
     private val appointmentRepository: AppointmentRepository,
     private val categoryRepository: CategoryRepository,
     private val alarmScheduler: AlarmScheduler,
+    private val dataExportManager: DataExportManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -96,8 +100,24 @@ class AppointmentEditViewModel @Inject constructor(
 
     fun updateDateTime(dateTime: Long) {
         val duration = _uiState.value.endDateTime - _uiState.value.dateTime
-        _uiState.update { it.copy(dateTime = dateTime, endDateTime = dateTime + duration) }
+        _uiState.update { 
+            it.copy(
+                dateTime = dateTime, 
+                endDateTime = dateTime + duration,
+                isPastDateError = isPast(dateTime)
+            ) 
+        }
         checkForOverlap()
+    }
+
+    private fun isPast(millis: Long): Boolean {
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        return millis < today
     }
 
     fun updateEndDateTime(endDateTime: Long) {
@@ -125,13 +145,36 @@ class AppointmentEditViewModel @Inject constructor(
         _uiState.update { it.copy(color = color) }
     }
 
-    fun save() {
+    fun onSaveClick() {
         val state = _uiState.value
         if (state.title.isBlank()) {
             _uiState.update { it.copy(titleError = true) }
             return
         }
 
+        if (!state.isEditMode && isPast(state.dateTime)) {
+            _uiState.update { it.copy(isPastDateError = true) }
+            return
+        }
+
+        if (state.hasOverlap) {
+            _uiState.update { it.copy(showOverlapDialog = true) }
+        } else {
+            performSave()
+        }
+    }
+
+    fun confirmOverlapSave() {
+        _uiState.update { it.copy(showOverlapDialog = false) }
+        performSave()
+    }
+
+    fun dismissOverlapDialog() {
+        _uiState.update { it.copy(showOverlapDialog = false) }
+    }
+
+    private fun performSave() {
+        val state = _uiState.value
         viewModelScope.launch {
             val appointment = Appointment(
                 id = state.id,
@@ -153,7 +196,12 @@ class AppointmentEditViewModel @Inject constructor(
             val finalAppointment = appointment.copy(id = id)
             alarmScheduler.schedule(finalAppointment)
 
+            dataExportManager.autoExport()
+
             _uiState.update { it.copy(isSaved = true) }
         }
     }
+
+    // Deprecated, use onSaveClick
+    fun save() = onSaveClick()
 }

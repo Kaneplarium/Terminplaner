@@ -6,6 +6,7 @@ import com.terminplaner.domain.model.Appointment
 import com.terminplaner.domain.model.Category
 import com.terminplaner.domain.repository.AppointmentRepository
 import com.terminplaner.domain.repository.CategoryRepository
+import com.terminplaner.util.DataExportManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -20,7 +21,8 @@ data class AppointmentsListUiState(
 @HiltViewModel
 class AppointmentsListViewModel @Inject constructor(
     private val appointmentRepository: AppointmentRepository,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val dataExportManager: DataExportManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppointmentsListUiState())
@@ -46,6 +48,7 @@ class AppointmentsListViewModel @Inject constructor(
     fun deleteAppointment(id: Long) {
         viewModelScope.launch {
             appointmentRepository.softDeleteAppointment(id)
+            dataExportManager.autoExport()
         }
     }
 }

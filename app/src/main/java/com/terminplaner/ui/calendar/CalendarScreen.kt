@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.terminplaner.domain.model.Appointment
+import com.terminplaner.ui.components.AppTopBar
 import com.terminplaner.ui.components.AppointmentCard
 import com.terminplaner.ui.navigation.Screen
 import java.text.SimpleDateFormat
@@ -32,7 +33,6 @@ import java.util.*
 @Composable
 fun CalendarScreen(
     navController: NavController,
-    onOpenDrawer: () -> Unit,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -40,26 +40,34 @@ fun CalendarScreen(
     val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.GERMAN)
     val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
+    val todayStart = remember {
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+    val isPastSelected = uiState.selectedDate < todayStart
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Kalender") },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menü öffnen")
-                    }
-                }
+            AppTopBar(
+                title = "Kalender",
+                navController = navController
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    navController.navigate(
-                        Screen.AppointmentEdit.createRoute(selectedDate = uiState.selectedDate)
-                    )
+            if (!isPastSelected) {
+                FloatingActionButton(
+                    onClick = {
+                        navController.navigate(
+                            Screen.AppointmentEdit.createRoute(selectedDate = uiState.selectedDate)
+                        )
+                    }
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Neuer Termin")
                 }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Neuer Termin")
             }
         }
     ) { padding ->
@@ -106,13 +114,7 @@ fun CalendarScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (uiState.appointments.isEmpty()) {
-                Text(
-                    text = "Keine Termine für diesen Tag",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
+            if (uiState.appointments.isNotEmpty()) {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -120,15 +122,7 @@ fun CalendarScreen(
                         val category = uiState.categories.find { it.id == appointment.categoryId }
                         AppointmentCard(
                             appointment = appointment,
-                            categoryColor = category?.let { Color(it.color) },
-                            onEdit = {
-                                navController.navigate(
-                                    Screen.AppointmentEdit.createRoute(appointmentId = appointment.id)
-                                )
-                            },
-                            onDelete = {
-                                viewModel.deleteAppointment(appointment.id)
-                            }
+                            categoryColor = category?.let { Color(it.color) }
                         )
                     }
                 }

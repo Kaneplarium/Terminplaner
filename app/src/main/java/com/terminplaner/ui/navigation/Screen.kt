@@ -2,6 +2,7 @@ package com.terminplaner.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -9,6 +10,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 sealed class Screen(val route: String) {
     data object Calendar : Screen("calendar")
     data object AppointmentsList : Screen("appointments_list")
+    data object TasksList : Screen("tasks_list")
     data object Settings : Screen("settings")
     data object AppointmentEdit : Screen("appointment_edit?appointmentId={appointmentId}&selectedDate={selectedDate}") {
         fun createRoute(appointmentId: Long? = null, selectedDate: Long? = null): String {
@@ -22,6 +24,11 @@ sealed class Screen(val route: String) {
             return "category_edit?categoryId=${categoryId ?: 0}"
         }
     }
+    data object TaskEdit : Screen("task_edit?taskId={taskId}&appointmentId={appointmentId}") {
+        fun createRoute(taskId: Long? = null, appointmentId: Long? = null): String {
+            return "task_edit?taskId=${taskId ?: 0}&appointmentId=${appointmentId ?: 0}"
+        }
+    }
 }
 
 sealed class BottomNavItem(
@@ -30,6 +37,7 @@ sealed class BottomNavItem(
     val icon: ImageVector
 ) {
     data object Calendar : BottomNavItem("calendar", "Kalender", Icons.Default.CalendarToday)
-    data object Appointments : BottomNavItem("appointments_list", "Termine", Icons.Default.Event)
+    data object Appointments : BottomNavItem("appointments_list", "Terminübersicht", Icons.Default.Event)
+    data object Tasks : BottomNavItem("tasks_list", "Aufgaben", Icons.Default.CheckCircle)
     data object Settings : BottomNavItem("settings", "Einstellungen", Icons.Default.Settings)
 }

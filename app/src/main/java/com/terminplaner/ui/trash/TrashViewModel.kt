@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.terminplaner.domain.model.Appointment
 import com.terminplaner.domain.repository.AppointmentRepository
+import com.terminplaner.util.DataExportManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,7 +17,8 @@ data class TrashUiState(
 
 @HiltViewModel
 class TrashViewModel @Inject constructor(
-    private val appointmentRepository: AppointmentRepository
+    private val appointmentRepository: AppointmentRepository,
+    private val dataExportManager: DataExportManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TrashUiState())
@@ -33,18 +35,21 @@ class TrashViewModel @Inject constructor(
     fun restoreAppointment(id: Long) {
         viewModelScope.launch {
             appointmentRepository.restoreAppointment(id)
+            dataExportManager.autoExport()
         }
     }
 
     fun permanentlyDelete(id: Long) {
         viewModelScope.launch {
             appointmentRepository.permanentlyDeleteAppointment(id)
+            dataExportManager.autoExport()
         }
     }
 
     fun emptyTrash() {
         viewModelScope.launch {
             appointmentRepository.emptyTrash()
+            dataExportManager.autoExport()
         }
     }
 }
