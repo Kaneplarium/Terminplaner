@@ -1,14 +1,19 @@
 package com.terminplaner.ui.tasks
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.terminplaner.ui.components.TimeDropdown
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -20,6 +25,9 @@ fun TaskEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+    val fullDateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+
+    var showDatePicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
@@ -45,9 +53,40 @@ fun TaskEditScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text("Erinnerung", style = MaterialTheme.typography.titleMedium)
+
+            OutlinedTextField(
+                value = uiState.reminderTime?.let { fullDateFormat.format(Date(it)) } ?: "Keine Erinnerung",
+                onValueChange = { },
+                label = { Text("Erinnerungsdatum") },
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Datum wählen")
+                    }
+                }
+            )
+
+            TimeDropdown(
+                label = "Uhrzeit",
+                currentTime = uiState.reminderTime ?: System.currentTimeMillis(),
+                onTimeSelected = { viewModel.updateReminderTime(it) },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (uiState.reminderTime != null) {
+                TextButton(onClick = { viewModel.updateReminderTime(null) }) {
+                    Text("Erinnerung entfernen")
+                }
+            }
+
+            Divider()
+
             OutlinedTextField(
                 value = uiState.title,
                 onValueChange = { viewModel.updateTitle(it) },
@@ -135,6 +174,41 @@ fun TaskEditScreen(
                     Text("Speichern")
                 }
             }
+        }
+    }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = uiState.reminderTime ?: System.currentTimeMillis()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { selectedDate ->
+                        val currentReminder = uiState.reminderTime ?: System.currentTimeMillis()
+                        val calendar = Calendar.getInstance().apply {
+                            timeInMillis = currentReminder
+                        }
+                        val newCal = Calendar.getInstance().apply {
+                            timeInMillis = selectedDate
+                            set(Calendar.HOUR_OF_DAY, calendar.get(Calendar.HOUR_OF_DAY))
+                            set(Calendar.MINUTE, calendar.get(Calendar.MINUTE))
+                        }
+                        viewModel.updateReminderTime(newCal.timeInMillis)
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Abbrechen")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

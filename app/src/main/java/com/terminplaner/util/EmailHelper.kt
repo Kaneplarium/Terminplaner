@@ -21,9 +21,11 @@ object EmailHelper {
             
             Titel: ${appointment.title}
             Datum/Uhrzeit: $dateString
+            Ort: ${appointment.location ?: "Nicht angegeben"}
+            Personen: ${appointment.persons ?: "Keine angegeben"}
             Beschreibung: ${appointment.description ?: "Keine Beschreibung vorhanden"}
             
-            Gesendet von TerminePlaner.
+            Gesendet von Terminplaner.
         """.trimIndent()
 
         val intent = Intent(Intent.ACTION_SENDTO).apply {

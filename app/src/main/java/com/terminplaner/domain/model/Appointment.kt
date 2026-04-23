@@ -4,6 +4,8 @@ data class Appointment(
     val id: Long = 0,
     val title: String,
     val description: String? = null,
+    val location: String? = null,
+    val persons: String? = null,
     val dateTime: Long,
     val endDateTime: Long,
     val categoryId: Long? = null,

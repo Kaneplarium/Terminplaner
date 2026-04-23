@@ -28,7 +28,8 @@ data class SettingsUiState(
     val exportSuccess: Boolean = false,
     val importSuccess: Boolean = false,
     val error: String? = null,
-    val selectedThemeColor: Long = 0xFF2196F3
+    val selectedThemeColor: Long = 0xFF2196F3,
+    val storagePath: String? = null
 )
 
 @HiltViewModel
@@ -44,13 +45,35 @@ class SettingsViewModel @Inject constructor(
     val themeColor = themePreferences.themeColor.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = 0xFF2196F3
+        initialValue = 0xFFE53935
+    )
+
+    val darkThemeMode = themePreferences.darkThemeMode.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ThemePreferences.MODE_SYSTEM
+    )
+
+    val isFirstRun = themePreferences.isFirstRun.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
     )
 
     fun setThemeColor(color: Long) {
         viewModelScope.launch {
             themePreferences.setThemeColor(color)
         }
+    }
+
+    fun setDarkMode(mode: Int) {
+        viewModelScope.launch {
+            themePreferences.setDarkMode(mode)
+        }
+    }
+
+    fun updateStoragePath(path: String?) {
+        _uiState.update { it.copy(storagePath = path) }
     }
 
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()

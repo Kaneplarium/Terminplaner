@@ -7,6 +7,7 @@ import com.terminplaner.domain.model.Appointment
 import com.terminplaner.domain.model.Task
 import com.terminplaner.domain.repository.AppointmentRepository
 import com.terminplaner.domain.repository.TaskRepository
+import com.terminplaner.util.AlarmScheduler
 import com.terminplaner.util.DataExportManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -19,6 +20,7 @@ data class TaskEditUiState(
     val description: String = "",
     val isCompleted: Boolean = false,
     val appointmentId: Long? = null,
+    val reminderTime: Long? = null,
     val appointments: List<Appointment> = emptyList(),
     val isEditMode: Boolean = false,
     val isSaved: Boolean = false,
@@ -29,6 +31,7 @@ data class TaskEditUiState(
 class TaskEditViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val appointmentRepository: AppointmentRepository,
+    private val alarmScheduler: AlarmScheduler,
     private val dataExportManager: DataExportManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -58,12 +61,17 @@ class TaskEditViewModel @Inject constructor(
                             title = task.title,
                             description = task.description ?: "",
                             isCompleted = task.isCompleted,
-                            appointmentId = task.appointmentId
+                            appointmentId = task.appointmentId,
+                            reminderTime = task.reminderTime
                         )
                     }
                 }
             }
         }
+    }
+
+    fun updateReminderTime(time: Long?) {
+        _uiState.update { it.copy(reminderTime = time) }
     }
 
     fun updateTitle(title: String) {
@@ -91,14 +99,24 @@ class TaskEditViewModel @Inject constructor(
                 title = state.title,
                 description = state.description.ifBlank { null },
                 isCompleted = state.isCompleted,
-                appointmentId = state.appointmentId
+                appointmentId = state.appointmentId,
+                reminderTime = state.reminderTime
             )
 
-            if (state.isEditMode) {
+            val taskId = if (state.isEditMode) {
                 taskRepository.updateTask(task)
+                state.id
             } else {
                 taskRepository.insertTask(task)
             }
+            
+            val finalTask = task.copy(id = taskId)
+            if (finalTask.reminderTime != null) {
+                alarmScheduler.scheduleTaskReminder(finalTask)
+            } else {
+                alarmScheduler.cancelTaskReminder(finalTask.id)
+            }
+
             dataExportManager.autoExport()
             _uiState.update { it.copy(isSaved = true) }
         }

@@ -19,6 +19,8 @@ data class AppointmentEditUiState(
     val id: Long = 0,
     val title: String = "",
     val description: String = "",
+    val location: String = "",
+    val persons: String = "",
     val dateTime: Long = System.currentTimeMillis(),
     val endDateTime: Long = System.currentTimeMillis() + 3600000, // + 1 hour
     val categoryId: Long? = null,
@@ -42,7 +44,8 @@ class AppointmentEditViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val appointmentId: Long = savedStateHandle.get<Long>("appointmentId") ?: 0
-    private val selectedDate: Long = savedStateHandle.get<Long>("selectedDate") ?: System.currentTimeMillis()
+    private val selectedDateArg: Long = savedStateHandle.get<Long>("selectedDate") ?: 0
+    private val selectedDate: Long = if (selectedDateArg > 0) selectedDateArg else System.currentTimeMillis()
 
     private val _uiState = MutableStateFlow(AppointmentEditUiState(isEditMode = appointmentId > 0))
     val uiState: StateFlow<AppointmentEditUiState> = _uiState.asStateFlow()
@@ -62,6 +65,8 @@ class AppointmentEditViewModel @Inject constructor(
                             id = appointment.id,
                             title = appointment.title,
                             description = appointment.description ?: "",
+                            location = appointment.location ?: "",
+                            persons = appointment.persons ?: "",
                             dateTime = appointment.dateTime,
                             endDateTime = appointment.endDateTime,
                             categoryId = appointment.categoryId,
@@ -92,10 +97,22 @@ class AppointmentEditViewModel @Inject constructor(
 
     fun updateTitle(title: String) {
         _uiState.update { it.copy(title = title, titleError = false) }
+        autoSave()
     }
 
     fun updateDescription(description: String) {
         _uiState.update { it.copy(description = description) }
+        autoSave()
+    }
+
+    fun updateLocation(location: String) {
+        _uiState.update { it.copy(location = location) }
+        autoSave()
+    }
+
+    fun updatePersons(persons: String) {
+        _uiState.update { it.copy(persons = persons) }
+        autoSave()
     }
 
     fun updateDateTime(dateTime: Long) {
@@ -108,6 +125,7 @@ class AppointmentEditViewModel @Inject constructor(
             ) 
         }
         checkForOverlap()
+        autoSave()
     }
 
     private fun isPast(millis: Long): Boolean {
@@ -123,6 +141,7 @@ class AppointmentEditViewModel @Inject constructor(
     fun updateEndDateTime(endDateTime: Long) {
         _uiState.update { it.copy(endDateTime = endDateTime) }
         checkForOverlap()
+        autoSave()
     }
 
     private fun checkForOverlap() {
@@ -139,10 +158,47 @@ class AppointmentEditViewModel @Inject constructor(
 
     fun updateCategory(categoryId: Long?) {
         _uiState.update { it.copy(categoryId = categoryId) }
+        autoSave()
     }
 
     fun updateColor(color: Int?) {
         _uiState.update { it.copy(color = color) }
+        autoSave()
+    }
+
+    private var saveJob: kotlinx.coroutines.Job? = null
+
+    private fun autoSave() {
+        val state = _uiState.value
+        if (state.title.isBlank() || state.isPastDateError) return
+
+        saveJob?.cancel()
+        saveJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(500) // Debounce save
+            
+            val appointment = Appointment(
+                id = state.id,
+                title = state.title,
+                description = state.description.ifBlank { null },
+                location = state.location.ifBlank { null },
+                persons = state.persons.ifBlank { null },
+                dateTime = state.dateTime,
+                endDateTime = state.endDateTime,
+                categoryId = state.categoryId,
+                color = state.color
+            )
+
+            if (state.isEditMode) {
+                appointmentRepository.updateAppointment(appointment)
+            } else {
+                val id = appointmentRepository.insertAppointment(appointment)
+                _uiState.update { it.copy(id = id, isEditMode = true) }
+            }
+            
+            val updatedState = _uiState.value
+            alarmScheduler.schedule(appointment.copy(id = updatedState.id))
+            dataExportManager.autoExport()
+        }
     }
 
     fun onSaveClick() {
@@ -160,48 +216,18 @@ class AppointmentEditViewModel @Inject constructor(
         if (state.hasOverlap) {
             _uiState.update { it.copy(showOverlapDialog = true) }
         } else {
-            performSave()
+            _uiState.update { it.copy(isSaved = true) }
         }
     }
 
     fun confirmOverlapSave() {
-        _uiState.update { it.copy(showOverlapDialog = false) }
-        performSave()
+        _uiState.update { it.copy(showOverlapDialog = false, isSaved = true) }
     }
 
     fun dismissOverlapDialog() {
         _uiState.update { it.copy(showOverlapDialog = false) }
     }
 
-    private fun performSave() {
-        val state = _uiState.value
-        viewModelScope.launch {
-            val appointment = Appointment(
-                id = state.id,
-                title = state.title,
-                description = state.description.ifBlank { null },
-                dateTime = state.dateTime,
-                endDateTime = state.endDateTime,
-                categoryId = state.categoryId,
-                color = state.color
-            )
-
-            val id = if (state.isEditMode) {
-                appointmentRepository.updateAppointment(appointment)
-                state.id
-            } else {
-                appointmentRepository.insertAppointment(appointment)
-            }
-            
-            val finalAppointment = appointment.copy(id = id)
-            alarmScheduler.schedule(finalAppointment)
-
-            dataExportManager.autoExport()
-
-            _uiState.update { it.copy(isSaved = true) }
-        }
-    }
-
-    // Deprecated, use onSaveClick
+    // Deprecated, use onSaveClick or autoSave
     fun save() = onSaveClick()
 }

@@ -3,7 +3,9 @@ package com.terminplaner.data.preferences
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,16 +21,41 @@ class ThemePreferences @Inject constructor(@ApplicationContext private val conte
     
     companion object {
         val THEME_COLOR_KEY = longPreferencesKey("theme_color")
+        val DARK_MODE_KEY = intPreferencesKey("dark_mode")
+        val IS_FIRST_RUN_KEY = booleanPreferencesKey("is_first_run")
         private const val DEFAULT_COLOR = 0xFFE53935 // Red
+        const val MODE_SYSTEM = 0
+        const val MODE_LIGHT = 1
+        const val MODE_DARK = 2
     }
 
     val themeColor: Flow<Long> = context.dataStore.data.map { preferences ->
         preferences[THEME_COLOR_KEY] ?: DEFAULT_COLOR
     }
 
+    val darkThemeMode: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[DARK_MODE_KEY] ?: MODE_SYSTEM
+    }
+
+    val isFirstRun: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[IS_FIRST_RUN_KEY] ?: true
+    }
+
     suspend fun setThemeColor(color: Long) {
         context.dataStore.edit { preferences ->
             preferences[THEME_COLOR_KEY] = color
+        }
+    }
+
+    suspend fun setDarkMode(mode: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[DARK_MODE_KEY] = mode
+        }
+    }
+
+    suspend fun setFirstRunCompleted() {
+        context.dataStore.edit { preferences ->
+            preferences[IS_FIRST_RUN_KEY] = false
         }
     }
 }

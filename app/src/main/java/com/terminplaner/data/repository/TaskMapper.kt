@@ -9,6 +9,7 @@ fun TaskEntity.toDomain(): Task = Task(
     description = description,
     isCompleted = isCompleted,
     appointmentId = appointmentId,
+    reminderTime = reminderTime,
     createdAt = createdAt,
     updatedAt = updatedAt
 )
@@ -19,6 +20,7 @@ fun Task.toEntity(): TaskEntity = TaskEntity(
     description = description,
     isCompleted = isCompleted,
     appointmentId = appointmentId,
+    reminderTime = reminderTime,
     createdAt = createdAt,
     updatedAt = updatedAt
 )

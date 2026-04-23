@@ -8,15 +8,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
+import com.terminplaner.data.preferences.ThemePreferences
 import com.terminplaner.ui.navigation.AppNavigation
+import com.terminplaner.ui.onboarding.OnboardingScreen
 import com.terminplaner.ui.theme.TerminePlanerTheme
 import com.terminplaner.ui.settings.SettingsViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -50,13 +52,34 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val themeColorLong by settingsViewModel.themeColor.collectAsState()
+            val darkThemeMode by settingsViewModel.darkThemeMode.collectAsState()
+            val isFirstRun by settingsViewModel.isFirstRun.collectAsState()
             
-            TerminePlanerTheme(primaryColor = Color(themeColorLong)) {
+            var showOnboarding by remember { mutableStateOf(false) }
+            
+            LaunchedEffect(isFirstRun) {
+                showOnboarding = isFirstRun
+            }
+            
+            val useDarkTheme = when (darkThemeMode) {
+                ThemePreferences.MODE_LIGHT -> false
+                ThemePreferences.MODE_DARK -> true
+                else -> isSystemInDarkTheme()
+            }
+            
+            TerminePlanerTheme(
+                darkTheme = useDarkTheme,
+                primaryColor = Color(themeColorLong)
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    AppNavigation()
+                    if (showOnboarding) {
+                        OnboardingScreen(onFinished = { showOnboarding = false })
+                    } else {
+                        AppNavigation()
+                    }
                 }
             }
         }

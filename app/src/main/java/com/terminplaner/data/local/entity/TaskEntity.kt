@@ -24,6 +24,7 @@ data class TaskEntity(
     val description: String? = null,
     val isCompleted: Boolean = false,
     val appointmentId: Long? = null,
+    val reminderTime: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

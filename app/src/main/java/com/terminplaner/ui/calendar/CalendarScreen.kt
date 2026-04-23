@@ -38,17 +38,6 @@ fun CalendarScreen(
     val uiState by viewModel.uiState.collectAsState()
     
     val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.GERMAN)
-    val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-
-    val todayStart = remember {
-        Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-    }
-    val isPastSelected = uiState.selectedDate < todayStart
 
     Scaffold(
         topBar = {
@@ -56,19 +45,6 @@ fun CalendarScreen(
                 title = "Kalender",
                 navController = navController
             )
-        },
-        floatingActionButton = {
-            if (!isPastSelected) {
-                FloatingActionButton(
-                    onClick = {
-                        navController.navigate(
-                            Screen.AppointmentEdit.createRoute(selectedDate = uiState.selectedDate)
-                        )
-                    }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Neuer Termin")
-                }
-            }
         }
     ) { padding ->
         Column(
@@ -108,7 +84,7 @@ fun CalendarScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Termine am ${dateFormat.format(Date(uiState.selectedDate))}",
+                text = "Termine",
                 style = MaterialTheme.typography.titleMedium
             )
 

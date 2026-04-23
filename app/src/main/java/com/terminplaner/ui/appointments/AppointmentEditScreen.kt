@@ -1,20 +1,29 @@
 package com.terminplaner.ui.appointments
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.provider.ContactsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.terminplaner.ui.components.ColorPicker
-import com.terminplaner.ui.navigation.Screen
+import com.terminplaner.ui.components.TimeDropdown
 import com.terminplaner.util.EmailHelper
 import java.text.SimpleDateFormat
 import java.util.*
@@ -28,11 +37,36 @@ fun AppointmentEditScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     var showDatePicker by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
-    var showEndTimePicker by remember { mutableStateOf(false) }
+
+    val contactLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val contactUri = result.data?.data ?: return@rememberLauncherForActivityResult
+            val cursor = context.contentResolver.query(contactUri, null, null, null, null)
+            if (cursor != null && cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+                if (nameIndex >= 0) {
+                    val name = cursor.getString(nameIndex)
+                    val currentPersons = uiState.persons
+                    val newPersons = if (currentPersons.isBlank()) name else "$currentPersons, $name"
+                    viewModel.updatePersons(newPersons)
+                }
+                cursor.close()
+            }
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val intent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
+            contactLauncher.launch(intent)
+        }
+    }
 
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
@@ -50,7 +84,13 @@ fun AppointmentEditScreen(
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Zurück")
                     }
-                }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.onSaveClick() }) {
+                        Icon(Icons.Default.Check, contentDescription = "Fertig")
+                    }
+                },
+                windowInsets = WindowInsets.statusBars
             )
         }
     ) { padding ->
@@ -58,8 +98,9 @@ fun AppointmentEditScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedTextField(
                 value = uiState.title,
@@ -77,7 +118,38 @@ fun AppointmentEditScreen(
                 onValueChange = { viewModel.updateDescription(it) },
                 label = { Text("Beschreibung") },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 3
+                minLines = 2
+            )
+
+            OutlinedTextField(
+                value = uiState.location,
+                onValueChange = { viewModel.updateLocation(it) },
+                label = { Text("Veranstaltungsort") },
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = { Icon(Icons.Default.Place, contentDescription = null) }
+            )
+
+            OutlinedTextField(
+                value = uiState.persons,
+                onValueChange = { viewModel.updatePersons(it) },
+                label = { Text("Personen") },
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = { Icon(Icons.Default.People, contentDescription = null) },
+                trailingIcon = {
+                    IconButton(onClick = {
+                        when (PackageManager.PERMISSION_GRANTED) {
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) -> {
+                                val intent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
+                                contactLauncher.launch(intent)
+                            }
+                            else -> {
+                                permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                            }
+                        }
+                    }) {
+                        Icon(Icons.Default.ContactPage, contentDescription = "Kontakte")
+                    }
+                }
             )
 
             OutlinedTextField(
@@ -97,34 +169,24 @@ fun AppointmentEditScreen(
                 }
             )
 
+            Text("Uhrzeit", style = MaterialTheme.typography.titleMedium)
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedTextField(
-                    value = timeFormat.format(Date(uiState.dateTime)),
-                    onValueChange = { },
-                    label = { Text("Startzeit") },
-                    modifier = Modifier.weight(1f),
-                    readOnly = true,
-                    trailingIcon = {
-                        IconButton(onClick = { showTimePicker = true }) {
-                            Icon(Icons.Default.Schedule, contentDescription = "Startzeit wählen")
-                        }
-                    }
+                TimeDropdown(
+                    label = "Start",
+                    currentTime = uiState.dateTime,
+                    onTimeSelected = { viewModel.updateDateTime(it) },
+                    modifier = Modifier.weight(1f)
                 )
 
-                OutlinedTextField(
-                    value = timeFormat.format(Date(uiState.endDateTime)),
-                    onValueChange = { },
-                    label = { Text("Endzeit") },
-                    modifier = Modifier.weight(1f),
-                    readOnly = true,
-                    trailingIcon = {
-                        IconButton(onClick = { showEndTimePicker = true }) {
-                            Icon(Icons.Default.Schedule, contentDescription = "Endzeit wählen")
-                        }
-                    }
+                TimeDropdown(
+                    label = "Ende",
+                    currentTime = uiState.endDateTime,
+                    onTimeSelected = { viewModel.updateEndDateTime(it) },
+                    modifier = Modifier.weight(1f)
                 )
             }
 
@@ -136,7 +198,7 @@ fun AppointmentEditScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Achtung: Zu dieser Zeit gibt es bereits einen anderen Termin!",
+                        text = "Achtung: Zeitkonflikt mit anderem Termin!",
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(8.dp),
                         style = MaterialTheme.typography.bodySmall
@@ -187,17 +249,17 @@ fun AppointmentEditScreen(
             }
 
             ColorPicker(
-                selectedColor = uiState.color ?: 0xFF2196F3.toInt(),
+                selectedColor = uiState.color ?: 0xFFE53935.toInt(),
                 onColorSelected = { viewModel.updateColor(it) }
             )
 
-            Text("Benachrichtigungen", style = MaterialTheme.typography.titleMedium)
-            
             OutlinedButton(
                 onClick = {
                     val appointment = com.terminplaner.domain.model.Appointment(
                         title = uiState.title,
                         description = uiState.description,
+                        location = uiState.location,
+                        persons = uiState.persons,
                         dateTime = uiState.dateTime,
                         endDateTime = uiState.endDateTime
                     )
@@ -205,30 +267,12 @@ fun AppointmentEditScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.Schedule, contentDescription = null)
+                Icon(Icons.Default.Email, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Per E-Mail erinnern")
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Abbrechen")
-                }
-                Button(
-                    onClick = { viewModel.onSaveClick() },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Speichern")
-                }
-            }
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 
@@ -282,71 +326,5 @@ fun AppointmentEditScreen(
         ) {
             DatePicker(state = datePickerState)
         }
-    }
-
-    if (showTimePicker) {
-        val timePickerState = rememberTimePickerState(
-            initialHour = Calendar.getInstance().apply { timeInMillis = uiState.dateTime }
-                .get(Calendar.HOUR_OF_DAY),
-            initialMinute = Calendar.getInstance().apply { timeInMillis = uiState.dateTime }
-                .get(Calendar.MINUTE)
-        )
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    val calendar = Calendar.getInstance().apply {
-                        timeInMillis = uiState.dateTime
-                        set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-                        set(Calendar.MINUTE, timePickerState.minute)
-                    }
-                    viewModel.updateDateTime(calendar.timeInMillis)
-                    showTimePicker = false
-                }) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) {
-                    Text("Abbrechen")
-                }
-            },
-            text = {
-                TimePicker(state = timePickerState)
-            }
-        )
-    }
-
-    if (showEndTimePicker) {
-        val timePickerState = rememberTimePickerState(
-            initialHour = Calendar.getInstance().apply { timeInMillis = uiState.endDateTime }
-                .get(Calendar.HOUR_OF_DAY),
-            initialMinute = Calendar.getInstance().apply { timeInMillis = uiState.endDateTime }
-                .get(Calendar.MINUTE)
-        )
-        AlertDialog(
-            onDismissRequest = { showEndTimePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    val calendar = Calendar.getInstance().apply {
-                        timeInMillis = uiState.endDateTime
-                        set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-                        set(Calendar.MINUTE, timePickerState.minute)
-                    }
-                    viewModel.updateEndDateTime(calendar.timeInMillis)
-                    showEndTimePicker = false
-                }) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEndTimePicker = false }) {
-                    Text("Abbrechen")
-                }
-            },
-            text = {
-                TimePicker(state = timePickerState)
-            }
-        )
     }
 }

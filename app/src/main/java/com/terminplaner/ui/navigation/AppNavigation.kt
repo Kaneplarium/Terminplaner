@@ -1,9 +1,7 @@
 package com.terminplaner.ui.navigation
 
-import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,71 +21,68 @@ import com.terminplaner.ui.trash.TrashScreen
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    Scaffold { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = "calendar",
-            modifier = Modifier.padding(innerPadding)
+    NavHost(
+        navController = navController,
+        startDestination = "calendar"
+    ) {
+        composable("calendar") {
+            CalendarScreen(navController = navController)
+        }
+        composable("appointments_list") {
+            AppointmentsListScreen(navController = navController)
+        }
+        composable("tasks_list") {
+            TasksListScreen(navController = navController)
+        }
+        composable("settings") {
+            SettingsScreen(navController = navController)
+        }
+        composable(
+            route = "appointment_edit?appointmentId={appointmentId}&selectedDate={selectedDate}",
+            arguments = listOf(
+                navArgument("appointmentId") {
+                    type = NavType.LongType
+                    defaultValue = 0L
+                },
+                navArgument("selectedDate") {
+                    type = NavType.LongType
+                    defaultValue = 0L
+                }
+            )
         ) {
-            composable("calendar") {
-                CalendarScreen(navController = navController)
-            }
-            composable("appointments_list") {
-                AppointmentsListScreen(navController = navController)
-            }
-            composable("tasks_list") {
-                TasksListScreen(navController = navController)
-            }
-            composable("settings") {
-                SettingsScreen(navController = navController)
-            }
-            composable(
-                route = "appointment_edit?appointmentId={appointmentId}&selectedDate={selectedDate}",
-                arguments = listOf(
-                    navArgument("appointmentId") {
-                        type = NavType.LongType
-                        defaultValue = 0L
-                    },
-                    navArgument("selectedDate") {
-                        type = NavType.LongType
-                        defaultValue = 0L
-                    }
-                )
-            ) {
-                AppointmentEditScreen(navController = navController)
-            }
-            composable("trash") {
-                TrashScreen(navController = navController)
-            }
-            composable("categories_list") {
-                CategoriesListScreen(navController = navController)
-            }
-            composable(
-                route = "category_edit?categoryId={categoryId}",
-                arguments = listOf(
-                    navArgument("categoryId") {
-                        type = NavType.LongType
-                        defaultValue = 0L
-                    }
-                )
-            ) {
-                CategoryEditScreen(navController = navController)
-            }
-            composable(
-                route = "task_edit?taskId={taskId}&appointmentId={appointmentId}",
-                arguments = listOf(
-                    navArgument("taskId") {
-                        type = NavType.LongType
-                        defaultValue = 0L
-                    },
-                    navArgument("appointmentId") {
-                        type = NavType.LongType
-                        defaultValue = 0L
-                    }
-                )
-            ) {
-                TaskEditScreen(navController = navController)
-            }
+            AppointmentEditScreen(navController = navController)
+        }
+        composable("trash") {
+            TrashScreen(navController = navController)
+        }
+        composable("categories_list") {
+            CategoriesListScreen(navController = navController)
+        }
+        composable(
+            route = "category_edit?categoryId={categoryId}",
+            arguments = listOf(
+                navArgument("categoryId") {
+                    type = NavType.LongType
+                    defaultValue = 0L
+                }
+            )
+        ) {
+            CategoryEditScreen(navController = navController)
+        }
+        composable(
+            route = "task_edit?taskId={taskId}&appointmentId={appointmentId}",
+            arguments = listOf(
+                navArgument("taskId") {
+                    type = NavType.LongType
+                    defaultValue = 0L
+                },
+                navArgument("appointmentId") {
+                    type = NavType.LongType
+                    defaultValue = 0L
+                }
+            )
+        ) {
+            TaskEditScreen(navController = navController)
         }
     }
 }
