@@ -23,4 +23,10 @@ class OnboardingViewModel @Inject constructor(
             themePreferences.setFirstRunCompleted()
         }
     }
+
+    fun setStoragePath(path: String?) {
+        viewModelScope.launch {
+            themePreferences.setStoragePath(path)
+        }
+    }
 }

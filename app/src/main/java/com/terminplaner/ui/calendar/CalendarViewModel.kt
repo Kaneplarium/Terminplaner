@@ -19,6 +19,7 @@ data class CalendarUiState(
     val appointments: List<Appointment> = emptyList(),
     val allAppointments: List<Appointment> = emptyList(),
     val categories: List<Category> = emptyList(),
+    val selectedCategoryId: Long? = null,
     val isLoading: Boolean = false
 )
 
@@ -50,14 +51,17 @@ class CalendarViewModel @Inject constructor(
         }.timeInMillis
     )
 
+    private val _selectedCategoryId = MutableStateFlow<Long?>(null)
+
     init {
         viewModelScope.launch {
             combine(
                 _selectedDate,
                 _currentMonth,
                 categoryRepository.getAllCategories(),
-                appointmentRepository.getAllAppointments()
-            ) { date, month, categories, allAppointments ->
+                appointmentRepository.getAllAppointments(),
+                _selectedCategoryId
+            ) { date, month, categories, allAppointments, selectedCatId ->
                 val calendar = Calendar.getInstance().apply {
                     timeInMillis = date
                     set(Calendar.HOUR_OF_DAY, 0)
@@ -69,7 +73,13 @@ class CalendarViewModel @Inject constructor(
                 calendar.add(Calendar.DAY_OF_MONTH, 1)
                 val endOfDay = calendar.timeInMillis
 
-                val dayAppointments = allAppointments.filter { 
+                val filteredAll = if (selectedCatId != null) {
+                    allAppointments.filter { it.categoryId == selectedCatId }
+                } else {
+                    allAppointments
+                }
+
+                val dayAppointments = filteredAll.filter { 
                     it.dateTime >= startOfDay && it.dateTime < endOfDay 
                 }
 
@@ -77,13 +87,18 @@ class CalendarViewModel @Inject constructor(
                     selectedDate = date,
                     currentMonth = month,
                     appointments = dayAppointments,
-                    allAppointments = allAppointments,
-                    categories = categories
+                    allAppointments = filteredAll,
+                    categories = categories,
+                    selectedCategoryId = selectedCatId
                 )
             }.collect { newState ->
                 _uiState.value = newState
             }
         }
+    }
+
+    fun selectCategory(categoryId: Long?) {
+        _selectedCategoryId.value = categoryId
     }
 
     fun selectDate(date: Long) {

@@ -1,13 +1,14 @@
 package com.terminplaner.ui.onboarding
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,7 +28,7 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     var step by remember { mutableIntStateOf(0) }
-    val totalSteps = 3
+    val totalSteps = 5
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -49,8 +50,10 @@ fun OnboardingScreen(
                 ) { targetStep ->
                     when (targetStep) {
                         0 -> WelcomeStep()
-                        1 -> ColorStep(onColorSelect = { viewModel.setThemeColor(it) })
-                        2 -> PermissionStep()
+                        1 -> FeaturesStep()
+                        2 -> ColorStep(onColorSelect = { viewModel.setThemeColor(it) })
+                        3 -> StorageStep(onPathSelect = { viewModel.setStoragePath(it) })
+                        4 -> PermissionStep()
                     }
                 }
             }
@@ -60,7 +63,6 @@ fun OnboardingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Progress dots
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     repeat(totalSteps) { i ->
                         Box(
@@ -121,6 +123,63 @@ fun WelcomeStep() {
 }
 
 @Composable
+fun FeaturesStep() {
+    Column(
+        horizontalAlignment = Alignment.Start,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "Deine Top Features",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Spacer(Modifier.height(32.dp))
+
+        FeatureItem(
+            icon = Icons.Default.CheckCircle,
+            title = "Intelligente Planung",
+            description = "Warnung bei Terminüberschneidungen und automatisches Speichern deiner Eingaben."
+        )
+        Spacer(Modifier.height(16.dp))
+        FeatureItem(
+            icon = Icons.Default.Notifications,
+            title = "Aufgaben & Erinnerungen",
+            description = "Verwalte Aufgaben mit exakten Erinnerungen und praktischer Schlummer-Funktion."
+        )
+        Spacer(Modifier.height(16.dp))
+        FeatureItem(
+            icon = Icons.Default.Security,
+            title = "Automatischer Schutz",
+            description = "Deine Daten werden bei jeder Änderung automatisch im Hintergrund gesichert."
+        )
+        Spacer(Modifier.height(16.dp))
+        FeatureItem(
+            icon = Icons.Default.Palette,
+            title = "Modernes Design",
+            description = "Wähle zwischen Hell- und Dunkelmodus sowie individuellen Akzentfarben."
+        )
+    }
+}
+
+@Composable
+fun FeatureItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, description: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(28.dp)
+        )
+        Spacer(Modifier.width(16.dp))
+        Column {
+            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(text = description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
 fun ColorStep(onColorSelect: (Long) -> Unit) {
     var selectedColor by remember { mutableLongStateOf(0xFFE53935) } // Default Red
 
@@ -142,7 +201,7 @@ fun ColorStep(onColorSelect: (Long) -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            val colors = listOf(Red, Orange, Green, Blue, Pink)
+            val colors = listOf(Red, Yellow, Green, Blue, Pink)
             colors.forEach { color ->
                 val colorLong = color.toArgb().toLong()
                 val isSelected = selectedColor == colorLong
@@ -167,10 +226,60 @@ fun ColorStep(onColorSelect: (Long) -> Unit) {
 }
 
 @Composable
+fun StorageStep(onPathSelect: (String) -> Unit) {
+    var selectedPath by remember { mutableStateOf<String?>(null) }
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            val path = it.toString()
+            selectedPath = path
+            onPathSelect(path)
+        }
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            Icons.Default.Storage, 
+            contentDescription = null, 
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.height(24.dp))
+        Text(
+            text = "Speicherort",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Wähle einen Ordner für automatische Backups deiner Daten.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(32.dp))
+        
+        Button(onClick = { launcher.launch(null) }) {
+            Text(if (selectedPath == null) "Ordner wählen" else "Ordner ändern")
+        }
+        
+        if (selectedPath != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Ausgewählt: $selectedPath",
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
 fun PermissionStep() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(
-            Icons.Default.Check, 
+            Icons.Default.Notifications,
             contentDescription = null, 
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.primary

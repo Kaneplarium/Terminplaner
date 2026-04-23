@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +24,7 @@ class ThemePreferences @Inject constructor(@ApplicationContext private val conte
         val THEME_COLOR_KEY = longPreferencesKey("theme_color")
         val DARK_MODE_KEY = intPreferencesKey("dark_mode")
         val IS_FIRST_RUN_KEY = booleanPreferencesKey("is_first_run")
+        val STORAGE_PATH_KEY = stringPreferencesKey("storage_path")
         private const val DEFAULT_COLOR = 0xFFE53935 // Red
         const val MODE_SYSTEM = 0
         const val MODE_LIGHT = 1
@@ -41,6 +43,10 @@ class ThemePreferences @Inject constructor(@ApplicationContext private val conte
         preferences[IS_FIRST_RUN_KEY] ?: true
     }
 
+    val storagePath: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[STORAGE_PATH_KEY]
+    }
+
     suspend fun setThemeColor(color: Long) {
         context.dataStore.edit { preferences ->
             preferences[THEME_COLOR_KEY] = color
@@ -56,6 +62,16 @@ class ThemePreferences @Inject constructor(@ApplicationContext private val conte
     suspend fun setFirstRunCompleted() {
         context.dataStore.edit { preferences ->
             preferences[IS_FIRST_RUN_KEY] = false
+        }
+    }
+
+    suspend fun setStoragePath(path: String?) {
+        context.dataStore.edit { preferences ->
+            if (path == null) {
+                preferences.remove(STORAGE_PATH_KEY)
+            } else {
+                preferences[STORAGE_PATH_KEY] = path
+            }
         }
     }
 }
