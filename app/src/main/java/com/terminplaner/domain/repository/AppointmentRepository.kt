@@ -14,6 +14,7 @@ interface AppointmentRepository {
     suspend fun restoreAppointment(id: Long)
     suspend fun permanentlyDeleteAppointment(id: Long)
     suspend fun emptyTrash()
+    suspend fun getOverlappingAppointments(start: Long, end: Long, excludeId: Long): List<Appointment>
     suspend fun getAllAppointmentsForExport(): List<Appointment>
     suspend fun importAppointments(appointments: List<Appointment>)
 }

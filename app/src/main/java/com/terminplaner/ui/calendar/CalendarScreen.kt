@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +32,7 @@ import java.util.*
 @Composable
 fun CalendarScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -42,6 +44,11 @@ fun CalendarScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Kalender") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menü öffnen")
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -149,6 +156,13 @@ fun CalendarGrid(
 
     val dayNames = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
 
+    val todayStart = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
     Column {
         Row(modifier = Modifier.fillMaxWidth()) {
             dayNames.forEach { day ->
@@ -183,6 +197,8 @@ fun CalendarGrid(
                         dateCal.add(Calendar.DAY_OF_MONTH, 1)
                         val dateEnd = dateCal.timeInMillis
 
+                        val isPast = dateStart < todayStart
+
                         val hasAppointments = allAppointments.any { 
                             it.dateTime >= dateStart && it.dateTime < dateEnd 
                         }
@@ -204,8 +220,11 @@ fun CalendarGrid(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = dayIndex.toString(),
-                                    color = if (isDateSelected) MaterialTheme.colorScheme.onPrimary
-                                            else MaterialTheme.colorScheme.onSurface,
+                                    color = when {
+                                        isDateSelected -> MaterialTheme.colorScheme.onPrimary
+                                        isPast -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        else -> MaterialTheme.colorScheme.onSurface
+                                    },
                                     fontWeight = if (isDateSelected) FontWeight.Bold else FontWeight.Normal
                                 )
                                 if (hasAppointments) {
@@ -214,8 +233,11 @@ fun CalendarGrid(
                                             .size(4.dp)
                                             .clip(CircleShape)
                                             .background(
-                                                if (isDateSelected) MaterialTheme.colorScheme.onPrimary
-                                                else MaterialTheme.colorScheme.primary
+                                                when {
+                                                    isDateSelected -> MaterialTheme.colorScheme.onPrimary
+                                                    isPast -> MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
+                                                    else -> MaterialTheme.colorScheme.primary
+                                                }
                                             )
                                     )
                                 } else {

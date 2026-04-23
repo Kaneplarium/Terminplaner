@@ -39,6 +39,9 @@ interface AppointmentDao {
     @Query("SELECT * FROM appointments")
     suspend fun getAllAppointmentsForExport(): List<AppointmentEntity>
 
+    @Query("SELECT * FROM appointments WHERE isDeleted = 0 AND id != :excludeId AND ((dateTime < :end AND endDateTime > :start))")
+    suspend fun getOverlappingAppointments(start: Long, end: Long, excludeId: Long): List<AppointmentEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(appointments: List<AppointmentEntity>)
 }

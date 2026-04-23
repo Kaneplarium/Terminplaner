@@ -19,7 +19,7 @@ class ThemePreferences @Inject constructor(@ApplicationContext private val conte
     
     companion object {
         val THEME_COLOR_KEY = longPreferencesKey("theme_color")
-        private const val DEFAULT_COLOR = 0xFF2196F3 // Blue
+        private const val DEFAULT_COLOR = 0xFFE53935 // Red
     }
 
     val themeColor: Flow<Long> = context.dataStore.data.map { preferences ->

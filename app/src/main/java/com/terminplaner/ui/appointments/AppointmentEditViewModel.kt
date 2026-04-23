@@ -25,7 +25,8 @@ data class AppointmentEditUiState(
     val categories: List<Category> = emptyList(),
     val isEditMode: Boolean = false,
     val isSaved: Boolean = false,
-    val titleError: Boolean = false
+    val titleError: Boolean = false,
+    val hasOverlap: Boolean = false
 )
 
 @HiltViewModel
@@ -63,6 +64,7 @@ class AppointmentEditViewModel @Inject constructor(
                             color = appointment.color
                         )
                     }
+                    checkForOverlap()
                 }
             } else {
                 val calendar = Calendar.getInstance().apply {
@@ -95,10 +97,24 @@ class AppointmentEditViewModel @Inject constructor(
     fun updateDateTime(dateTime: Long) {
         val duration = _uiState.value.endDateTime - _uiState.value.dateTime
         _uiState.update { it.copy(dateTime = dateTime, endDateTime = dateTime + duration) }
+        checkForOverlap()
     }
 
     fun updateEndDateTime(endDateTime: Long) {
         _uiState.update { it.copy(endDateTime = endDateTime) }
+        checkForOverlap()
+    }
+
+    private fun checkForOverlap() {
+        val state = _uiState.value
+        viewModelScope.launch {
+            val overlapping = appointmentRepository.getOverlappingAppointments(
+                state.dateTime,
+                state.endDateTime,
+                state.id
+            )
+            _uiState.update { it.copy(hasOverlap = overlapping.isNotEmpty()) }
+        }
     }
 
     fun updateCategory(categoryId: Long?) {

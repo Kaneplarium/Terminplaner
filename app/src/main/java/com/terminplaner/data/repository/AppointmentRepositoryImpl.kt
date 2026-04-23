@@ -57,6 +57,10 @@ class AppointmentRepositoryImpl @Inject constructor(
         appointmentDao.emptyTrash()
     }
 
+    override suspend fun getOverlappingAppointments(start: Long, end: Long, excludeId: Long): List<Appointment> {
+        return appointmentDao.getOverlappingAppointments(start, end, excludeId).map { it.toDomain() }
+    }
+
     override suspend fun getAllAppointmentsForExport(): List<Appointment> {
         return appointmentDao.getAllAppointmentsForExport().map { it.toDomain() }
     }

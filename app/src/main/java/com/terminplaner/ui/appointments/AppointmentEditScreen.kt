@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.terminplaner.ui.components.ColorPicker
@@ -26,6 +27,8 @@ fun AppointmentEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
@@ -40,6 +43,7 @@ fun AppointmentEditScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -79,23 +83,23 @@ fun AppointmentEditScreen(
                 minLines = 3
             )
 
+            OutlinedTextField(
+                value = dateFormat.format(Date(uiState.dateTime)),
+                onValueChange = { },
+                label = { Text("Datum") },
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Datum wählen")
+                    }
+                }
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedTextField(
-                    value = dateFormat.format(Date(uiState.dateTime)),
-                    onValueChange = { },
-                    label = { Text("Datum") },
-                    modifier = Modifier.weight(1f),
-                    readOnly = true,
-                    trailingIcon = {
-                        IconButton(onClick = { showDatePicker = true }) {
-                            Icon(Icons.Default.DateRange, contentDescription = "Datum wählen")
-                        }
-                    }
-                )
-
                 OutlinedTextField(
                     value = timeFormat.format(Date(uiState.dateTime)),
                     onValueChange = { },
@@ -121,6 +125,22 @@ fun AppointmentEditScreen(
                         }
                     }
                 )
+            }
+
+            if (uiState.hasOverlap) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Achtung: Zu dieser Zeit gibt es bereits einen anderen Termin!",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(8.dp),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
 
             if (uiState.categories.isNotEmpty()) {
@@ -202,7 +222,17 @@ fun AppointmentEditScreen(
                     Text("Abbrechen")
                 }
                 Button(
-                    onClick = { viewModel.save() },
+                    onClick = { 
+                        if (uiState.hasOverlap) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "Hinweis: Dieser Termin überschneidet sich mit einem anderen!",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                        }
+                        viewModel.save() 
+                    },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Speichern")

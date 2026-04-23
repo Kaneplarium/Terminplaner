@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -20,6 +21,7 @@ import java.util.*
 @Composable
 fun AppointmentsListScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit,
     viewModel: AppointmentsListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -28,7 +30,12 @@ fun AppointmentsListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Termine") }
+                title = { Text("Termine") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menü öffnen")
+                    }
+                }
             )
         },
         floatingActionButton = {
