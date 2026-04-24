@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.terminplaner"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.kaneplarium.terminplaner"
         minSdk = 34
-        targetSdk = 34
+        targetSdk = 37
         versionCode = 5
         versionName = "2026.04.24.21.01"
 
@@ -20,10 +20,12 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        resourceConfigurations += listOf("de", "en")
+        androidResources {
+            localeFilters += listOf("de", "en")
+        }
         
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
         // applicationIdSuffix = defaultApplicationIdSuffix
         // versionNameSuffix = defaultVersionNameSuffix
