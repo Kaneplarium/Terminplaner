@@ -21,6 +21,7 @@ android {
             useSupportLibrary = true
         }
         androidResources {
+            @Suppress("UnstableApiUsage")
             localeFilters += listOf("de", "en")
         }
         
