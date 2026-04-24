@@ -102,6 +102,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun restartOnboarding() {
+        viewModelScope.launch {
+            themePreferences.resetFirstRun()
+        }
+    }
+
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
     fun exportData(context: Context) {

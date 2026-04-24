@@ -75,6 +75,12 @@ class ThemePreferences @Inject constructor(@ApplicationContext private val conte
         }
     }
 
+    suspend fun resetFirstRun() {
+        context.dataStore.edit { preferences ->
+            preferences[IS_FIRST_RUN_KEY] = true
+        }
+    }
+
     suspend fun setStoragePath(path: String?) {
         context.dataStore.edit { preferences ->
             if (path == null) {

@@ -86,7 +86,7 @@ fun SettingsScreen(
                 modifier = Modifier.clickable { showNameDialog = true }
             )
 
-            Divider()
+            HorizontalDivider()
 
             ListItem(
                 headlineContent = { Text("Papierkorb") },
@@ -104,7 +104,7 @@ fun SettingsScreen(
                 modifier = Modifier.clickable { navController.navigate(Screen.CategoriesList.route) }
             )
 
-            Divider()
+            HorizontalDivider()
 
             ListItem(
                 headlineContent = { Text("Daten exportieren") },
@@ -127,7 +127,18 @@ fun SettingsScreen(
                 modifier = Modifier.clickable { storageLauncher.launch(null) }
             )
 
-            Divider()
+            HorizontalDivider()
+
+            ListItem(
+                headlineContent = { Text("Einrichtungsassistent") },
+                supportingContent = { Text("Ersteinrichtung erneut starten") },
+                leadingContent = { Icon(Icons.Default.RestartAlt, contentDescription = null) },
+                modifier = Modifier.clickable { 
+                    viewModel.restartOnboarding()
+                }
+            )
+
+            HorizontalDivider()
 
             ListItem(
                 headlineContent = { Text("Dunkles Design") },
@@ -227,7 +238,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.weight(1f))
             
             Text(
-                text = "Version 2026.04.24.20.13",
+                text = "Version 2026.04.25.00.55",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),

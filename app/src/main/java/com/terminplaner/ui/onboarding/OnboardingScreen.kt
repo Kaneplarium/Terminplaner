@@ -194,6 +194,12 @@ fun FeaturesStep() {
             title = "Modernes Design",
             description = "Wähle zwischen Hell- und Dunkelmodus sowie individuellen Akzentfarben."
         )
+        Spacer(Modifier.height(16.dp))
+        FeatureItem(
+            icon = Icons.Default.Favorite,
+            title = "Open Source & Werbefrei",
+            description = "Diese App ist 100% kostenlos, quelloffen und enthält keine nervige Werbung."
+        )
     }
 }
 
