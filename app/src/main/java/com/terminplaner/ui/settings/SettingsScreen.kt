@@ -227,7 +227,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.weight(1f))
             
             Text(
-                text = "Version 2026.04.23.18.24",
+                text = "Version 2026.04.24.20.13",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),

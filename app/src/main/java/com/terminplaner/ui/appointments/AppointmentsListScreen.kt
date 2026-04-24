@@ -1,6 +1,5 @@
 package com.terminplaner.ui.appointments
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,12 +18,10 @@ import com.terminplaner.ui.navigation.Screen
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppointmentsListScreen(
     navController: NavController,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: AppointmentsListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -115,22 +112,18 @@ fun AppointmentsListScreen(
                     }
                     items(appointments, key = { it.id }) { appointment ->
                         val category = uiState.categories.find { it.id == appointment.categoryId }
-                        with(sharedTransitionScope) {
-                            AppointmentCard(
-                                appointment = appointment,
-                                categoryColor = category?.let { androidx.compose.ui.graphics.Color(it.color) },
-                                modifier = Modifier.sharedElement(
-                                    rememberSharedContentState(key = "appointment-${appointment.id}"),
-                                    animatedVisibilityScope = animatedVisibilityScope
-                                ),
-                                onEdit = {
-                                    navController.navigate("appointment_detail/${appointment.id}")
-                                },
-                                onDelete = {
-                                    appointmentToDelete = appointment.id
-                                }
-                            )
-                        }
+                        AppointmentCard(
+                            appointment = appointment,
+                            categoryColor = category?.let { androidx.compose.ui.graphics.Color(it.color) },
+                            onEdit = {
+                                navController.navigate(
+                                    Screen.AppointmentEdit.createRoute(appointmentId = appointment.id)
+                                )
+                            },
+                            onDelete = {
+                                appointmentToDelete = appointment.id
+                            }
+                        )
                     }
                 }
             }

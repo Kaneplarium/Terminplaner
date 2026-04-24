@@ -1,6 +1,5 @@
 package com.terminplaner.ui.calendar
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,23 +20,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.terminplaner.domain.model.Appointment
 import com.terminplaner.domain.model.Category
 import com.terminplaner.ui.components.AppTopBar
 import com.terminplaner.ui.components.AppointmentCard
-import com.terminplaner.ui.navigation.Screen
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
     navController: NavController,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -116,14 +111,11 @@ fun CalendarScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Swiping between days for appointments
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f)
-            ) { page ->
-                val dayAppointments = remember(uiState.allAppointments, uiState.selectedDate) {
-                    uiState.appointments // This is already filtered by VM for selectedDate
-                }
+            ) {
+                val dayAppointments = uiState.appointments
 
                 if (dayAppointments.isNotEmpty()) {
                     LazyColumn(
@@ -132,19 +124,10 @@ fun CalendarScreen(
                     ) {
                         items(dayAppointments) { appointment ->
                             val category = uiState.categories.find { it.id == appointment.categoryId }
-                            with(sharedTransitionScope) {
-                                AppointmentCard(
-                                    appointment = appointment,
-                                    categoryColor = category?.let { Color(it.color) },
-                                    modifier = Modifier.sharedElement(
-                                        rememberSharedContentState(key = "appointment-${appointment.id}"),
-                                        animatedVisibilityScope = animatedVisibilityScope
-                                    ),
-                                    onEdit = {
-                                        navController.navigate("appointment_detail/${appointment.id}")
-                                    }
-                                )
-                            }
+                            AppointmentCard(
+                                appointment = appointment,
+                                categoryColor = category?.let { Color(it.color) }
+                            )
                         }
                     }
                 } else {

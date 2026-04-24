@@ -1,6 +1,5 @@
 package com.terminplaner.ui.appointments
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -16,18 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.terminplaner.domain.model.Appointment
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppointmentDetailScreen(
     appointmentId: Long,
     onDismiss: () -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: AppointmentsListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -49,84 +45,78 @@ fun AppointmentDetailScreen(
         }
     }
 
-    with(sharedTransitionScope) {
-        Surface(
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .offset { IntOffset(0, offsetY.roundToInt()) }
+            .draggable(
+                state = draggableState,
+                orientation = Orientation.Vertical,
+                onDragStopped = {
+                    if (offsetY <= 400f) offsetY = 0f
+                }
+            ),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .offset { IntOffset(0, offsetY.roundToInt()) }
-                .draggable(
-                    state = draggableState,
-                    orientation = Orientation.Vertical,
-                    onDragStopped = {
-                        if (offsetY <= 400f) offsetY = 0f
-                    }
-                )
-                .sharedElement(
-                    rememberSharedContentState(key = "appointment-${appointment.id}"),
-                    animatedVisibilityScope = animatedVisibilityScope
-                ),
-            color = MaterialTheme.colorScheme.background
+                .padding(24.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp)
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.End)
             ) {
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = "Schließen")
-                }
+                Icon(Icons.Default.Close, contentDescription = "Schließen")
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
+            Text(
+                text = appointment.title,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            DetailItem(
+                icon = Icons.Default.LocationOn,
+                text = appointment.location ?: "Kein Veranstaltungsort"
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
+            DetailItem(
+                icon = Icons.Default.People,
+                text = appointment.persons ?: "Keine Personen hinzugefügt"
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Text(
+                text = dateFormat.format(Date(appointment.dateTime)),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "${timeFormat.format(Date(appointment.dateTime))} - ${timeFormat.format(Date(appointment.endDateTime))}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (!appointment.description.isNullOrBlank()) {
                 Text(
-                    text = appointment.title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    text = "Beschreibung",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.secondary
                 )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                DetailItem(
-                    icon = Icons.Default.LocationOn,
-                    text = appointment.location ?: "Kein Veranstaltungsort"
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-
-                DetailItem(
-                    icon = Icons.Default.People,
-                    text = appointment.persons ?: "Keine Personen hinzugefügt"
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = dateFormat.format(Date(appointment.dateTime)),
-                    style = MaterialTheme.typography.titleMedium
+                    text = appointment.description,
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                Text(
-                    text = "${timeFormat.format(Date(appointment.dateTime))} - ${timeFormat.format(Date(appointment.endDateTime))}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                if (!appointment.description.isNullOrBlank()) {
-                    Text(
-                        text = "Beschreibung",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = appointment.description,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
             }
         }
     }
