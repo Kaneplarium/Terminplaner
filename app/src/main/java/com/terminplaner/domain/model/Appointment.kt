@@ -10,6 +10,8 @@ data class Appointment(
     val endDateTime: Long,
     val categoryId: Long? = null,
     val color: Int? = null,
+    val isFocusMode: Boolean = false,
+    val isCompleted: Boolean = false,
     val isDeleted: Boolean = false,
     val deletedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),

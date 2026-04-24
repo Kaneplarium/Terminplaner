@@ -34,4 +34,8 @@
     <string name="export_success">Export erfolgreich</string>
     <string name="import_success">Import erfolgreich</string>
     <string name="title_required">Titel ist erforderlich</string>
+    <string name="shortcut_new_appointment">Neuer Termin</string>
+    <string name="shortcut_new_appointment_long">Einen neuen Termin erstellen</string>
+    <string name="shortcut_today_overview">Heutige Übersicht</string>
+    <string name="shortcut_today_overview_long">Alle Termine von heute anzeigen</string>
 </resources>

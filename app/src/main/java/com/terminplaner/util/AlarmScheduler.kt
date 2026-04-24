@@ -12,6 +12,12 @@ class AlarmScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     fun schedule(appointment: Appointment) {
+        if (appointment.isCompleted || appointment.isDeleted) {
+            cancel(appointment.id)
+            cancelFocusMode(appointment.id)
+            return
+        }
+        
         val intent = Intent(context, NotificationReceiver::class.java).apply {
             action = "ACTION_APPOINTMENT_REMINDER"
             putExtra("title", appointment.title)
@@ -26,7 +32,6 @@ class AlarmScheduler(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // Schedule only if the appointment is in the future
         if (appointment.dateTime > System.currentTimeMillis()) {
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
@@ -34,9 +39,72 @@ class AlarmScheduler(private val context: Context) {
                 pendingIntent
             )
         }
+
+        // Schedule Focus Mode (DND)
+        if (appointment.isFocusMode) {
+            scheduleFocusMode(appointment)
+        } else {
+            cancelFocusMode(appointment.id)
+        }
+    }
+
+    private fun scheduleFocusMode(appointment: Appointment) {
+        // Start DND
+        val startIntent = Intent(context, NotificationReceiver::class.java).apply {
+            action = "ACTION_START_FOCUS_MODE"
+            putExtra("appointmentId", appointment.id)
+        }
+        val startPendingIntent = PendingIntent.getBroadcast(
+            context,
+            (appointment.id + 2000000).toInt(),
+            startIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        if (appointment.dateTime > System.currentTimeMillis()) {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                appointment.dateTime,
+                startPendingIntent
+            )
+        }
+
+        // End DND
+        val endIntent = Intent(context, NotificationReceiver::class.java).apply {
+            action = "ACTION_END_FOCUS_MODE"
+            putExtra("appointmentId", appointment.id)
+        }
+        val endPendingIntent = PendingIntent.getBroadcast(
+            context,
+            (appointment.id + 3000000).toInt(),
+            endIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        if (appointment.endDateTime > System.currentTimeMillis()) {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                appointment.endDateTime,
+                endPendingIntent
+            )
+        }
+    }
+
+    private fun cancelFocusMode(appointmentId: Long) {
+        val startIntent = Intent(context, NotificationReceiver::class.java).apply { action = "ACTION_START_FOCUS_MODE" }
+        val startPendingIntent = PendingIntent.getBroadcast(context, (appointmentId + 2000000).toInt(), startIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE)
+        if (startPendingIntent != null) alarmManager.cancel(startPendingIntent)
+
+        val endIntent = Intent(context, NotificationReceiver::class.java).apply { action = "ACTION_END_FOCUS_MODE" }
+        val endPendingIntent = PendingIntent.getBroadcast(context, (appointmentId + 3000000).toInt(), endIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE)
+        if (endPendingIntent != null) alarmManager.cancel(endPendingIntent)
     }
 
     fun scheduleTaskReminder(task: Task) {
+        if (task.isCompleted) {
+            cancelTaskReminder(task.id)
+            return
+        }
         val time = task.reminderTime ?: return
         
         val intent = Intent(context, NotificationReceiver::class.java).apply {

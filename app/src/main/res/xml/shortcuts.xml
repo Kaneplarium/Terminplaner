@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new_appointment"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:shortcutShortLabel="@string/shortcut_new_appointment"
+        android:shortcutLongLabel="@string/shortcut_new_appointment_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.kaneplarium.terminplaner"
+            android:targetClass="com.terminplaner.MainActivity">
+            <extra android:name="shortcut" android:value="new_appointment" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="today_overview"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:shortcutShortLabel="@string/shortcut_today_overview"
+        android:shortcutLongLabel="@string/shortcut_today_overview_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.kaneplarium.terminplaner"
+            android:targetClass="com.terminplaner.MainActivity">
+            <extra android:name="shortcut" android:value="today_overview" />
+        </intent>
+    </shortcut>
+</shortcuts>

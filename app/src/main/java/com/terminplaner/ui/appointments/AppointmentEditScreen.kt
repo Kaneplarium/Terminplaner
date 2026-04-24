@@ -24,7 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.terminplaner.ui.components.ColorPicker
 import com.terminplaner.ui.components.TimeDropdown
-import com.terminplaner.util.EmailHelper
+import com.terminplaner.util.ExternalCalendarHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -37,8 +37,17 @@ fun AppointmentEditScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+    val dateTimeFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
 
     var showDatePicker by remember { mutableStateOf(false) }
+
+    val photoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            viewModel.processFlyer(bitmap)
+        }
+    }
 
     val contactLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -86,6 +95,9 @@ fun AppointmentEditScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { photoLauncher.launch(null) }) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = "Flyer scannen")
+                    }
                     IconButton(onClick = { viewModel.onSaveClick() }) {
                         Icon(Icons.Default.Check, contentDescription = "Fertig")
                     }
@@ -102,6 +114,29 @@ fun AppointmentEditScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (uiState.suggestedDateTime != null) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Datum erkannt: ${dateTimeFormat.format(Date(uiState.suggestedDateTime!!))}",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { viewModel.applySuggestion() }) {
+                            Text("Anwenden")
+                        }
+                    }
+                }
+            }
+
             OutlinedTextField(
                 value = uiState.title,
                 onValueChange = { viewModel.updateTitle(it) },
@@ -253,6 +288,18 @@ fun AppointmentEditScreen(
                 onColorSelected = { viewModel.updateColor(it) }
             )
 
+            ListItem(
+                headlineContent = { Text("Fokus-Modus") },
+                supportingContent = { Text("Aktiviert automatisch 'Bitte nicht stören'") },
+                leadingContent = { Icon(Icons.Default.DoNotDisturbOn, contentDescription = null) },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.isFocusMode,
+                        onCheckedChange = { viewModel.updateFocusMode(it) }
+                    )
+                }
+            )
+
             OutlinedButton(
                 onClick = {
                     val appointment = com.terminplaner.domain.model.Appointment(
@@ -263,13 +310,13 @@ fun AppointmentEditScreen(
                         dateTime = uiState.dateTime,
                         endDateTime = uiState.endDateTime
                     )
-                    EmailHelper.sendAppointmentEmail(context, appointment)
+                    ExternalCalendarHelper.addToExternalCalendar(context, appointment)
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.Email, contentDescription = null)
+                Icon(Icons.Default.CalendarMonth, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Per E-Mail erinnern")
+                Text("In Kalender eintragen")
             }
 
             Spacer(modifier = Modifier.height(32.dp))

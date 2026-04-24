@@ -24,9 +24,21 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    fun setDynamicColor(enabled: Boolean) {
+        viewModelScope.launch {
+            themePreferences.setDynamicColor(enabled)
+        }
+    }
+
     fun setStoragePath(path: String?) {
         viewModelScope.launch {
             themePreferences.setStoragePath(path)
+        }
+    }
+
+    fun setUserName(name: String?) {
+        viewModelScope.launch {
+            themePreferences.setUserName(name)
         }
     }
 }

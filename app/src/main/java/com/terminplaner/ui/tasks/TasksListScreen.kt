@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import com.terminplaner.domain.model.Task
 import com.terminplaner.ui.components.AppTopBar
 import com.terminplaner.ui.navigation.Screen
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,25 +32,55 @@ fun TasksListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+    val scope = rememberCoroutineScope()
+    
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Anstehend", "Erledigt")
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showEditSheet by remember { mutableStateOf(false) }
+    var editingTaskId by remember { mutableLongStateOf(0L) }
 
     Scaffold(
         topBar = {
-            AppTopBar(
-                title = "Aufgaben",
-                navController = navController
-            )
+            Column {
+                AppTopBar(
+                    title = if (uiState.userName != null) "Hallo ${uiState.userName}" else "Aufgaben",
+                    navController = navController
+                )
+                TabRow(selectedTabIndex = selectedTab) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = { Text(title) }
+                        )
+                    }
+                }
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    navController.navigate(Screen.TaskEdit.createRoute())
+            if (selectedTab == 0) {
+                FloatingActionButton(
+                    onClick = {
+                        editingTaskId = 0L
+                        showEditSheet = true
+                    }
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Neue Aufgabe")
                 }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Neue Aufgabe")
             }
         }
     ) { padding ->
-        if (uiState.tasks.isEmpty()) {
+        val filteredTasks = remember(uiState.tasks, selectedTab) {
+            if (selectedTab == 0) {
+                uiState.tasks.filter { !it.isCompleted }
+            } else {
+                uiState.tasks.filter { it.isCompleted }
+            }
+        }
+
+        if (filteredTasks.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -58,7 +89,7 @@ fun TasksListScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Keine Aufgaben vorhanden",
+                    text = if (selectedTab == 0) "Keine anstehenden Aufgaben" else "Keine erledigten Aufgaben",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -71,7 +102,7 @@ fun TasksListScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiState.tasks, key = { it.id }) { task ->
+                items(filteredTasks, key = { it.id }) { task ->
                     val associatedAppointment = uiState.appointments.find { it.id == task.appointmentId }
                     
                     TaskItem(
@@ -81,11 +112,45 @@ fun TasksListScreen(
                         onToggle = { viewModel.toggleTaskCompletion(task) },
                         onDelete = { viewModel.deleteTask(task.id) },
                         onClick = {
-                            navController.navigate(Screen.TaskEdit.createRoute(taskId = task.id))
+                            editingTaskId = task.id
+                            showEditSheet = true
                         }
                     )
                 }
             }
+        }
+    }
+
+    if (showEditSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showEditSheet = false },
+            sheetState = sheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            val editViewModel: TaskEditViewModel = hiltViewModel(
+                key = "task_edit_$editingTaskId"
+            )
+            
+            // Explicitly load the task since we're not using navigation arguments
+            LaunchedEffect(editingTaskId) {
+                if (editingTaskId > 0) {
+                    editViewModel.loadTask(editingTaskId)
+                }
+            }
+            
+            TaskEditContent(
+                viewModel = editViewModel,
+                onSaved = {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        showEditSheet = false
+                    }
+                },
+                onCancel = {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        showEditSheet = false
+                    }
+                }
+            )
         }
     }
 }

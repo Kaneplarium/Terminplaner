@@ -1,13 +1,17 @@
 package com.terminplaner.ui.calendar
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,29 +21,48 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.terminplaner.domain.model.Appointment
 import com.terminplaner.domain.model.Category
 import com.terminplaner.ui.components.AppTopBar
 import com.terminplaner.ui.components.AppointmentCard
+import com.terminplaner.ui.navigation.Screen
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun CalendarScreen(
     navController: NavController,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.GERMAN)
     var showFilter by remember { mutableStateOf(false) }
 
+    val initialPage = Int.MAX_VALUE / 2
+    val pagerState = rememberPagerState(pageCount = { Int.MAX_VALUE }, initialPage = initialPage)
+
+    LaunchedEffect(pagerState.currentPage) {
+        val deltaDays = pagerState.currentPage - initialPage
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, deltaDays)
+        }
+        viewModel.selectDate(calendar.timeInMillis)
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Kalender",
+                title = if (uiState.userName != null) "Hallo ${uiState.userName}" else "Kalender",
                 navController = navController
             )
         }
@@ -55,11 +78,17 @@ fun CalendarScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = monthFormat.format(Date(uiState.selectedDate)),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = monthFormat.format(Date(uiState.selectedDate)),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(onClick = { viewModel.goToToday() }) {
+                        Icon(Icons.Default.Today, contentDescription = "Heute")
+                    }
+                }
                 IconButton(onClick = { showFilter = true }) {
                     Icon(
                         imageVector = Icons.Default.FilterList,
@@ -87,21 +116,42 @@ fun CalendarScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (uiState.appointments.isNotEmpty()) {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(uiState.appointments) { appointment ->
-                        val category = uiState.categories.find { it.id == appointment.categoryId }
-                        AppointmentCard(
-                            appointment = appointment,
-                            categoryColor = category?.let { Color(it.color) }
-                        )
+            // Swiping between days for appointments
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f)
+            ) { page ->
+                val dayAppointments = remember(uiState.allAppointments, uiState.selectedDate) {
+                    uiState.appointments // This is already filtered by VM for selectedDate
+                }
+
+                if (dayAppointments.isNotEmpty()) {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(dayAppointments) { appointment ->
+                            val category = uiState.categories.find { it.id == appointment.categoryId }
+                            with(sharedTransitionScope) {
+                                AppointmentCard(
+                                    appointment = appointment,
+                                    categoryColor = category?.let { Color(it.color) },
+                                    modifier = Modifier.sharedElement(
+                                        rememberSharedContentState(key = "appointment-${appointment.id}"),
+                                        animatedVisibilityScope = animatedVisibilityScope
+                                    ),
+                                    onEdit = {
+                                        navController.navigate("appointment_detail/${appointment.id}")
+                                    }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Keine Termine", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
             }
         }
     }
@@ -127,7 +177,6 @@ fun ThreeWeekCalendar(
 ) {
     val calendar = Calendar.getInstance().apply {
         timeInMillis = selectedDate
-        // Start from Monday of the current week
         set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
         set(Calendar.HOUR_OF_DAY, 0)
         set(Calendar.MINUTE, 0)
@@ -153,7 +202,6 @@ fun ThreeWeekCalendar(
     val dayNames = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Day names header
         Row(modifier = Modifier.fillMaxWidth()) {
             dayNames.forEach { day ->
                 Text(
@@ -168,49 +216,21 @@ fun ThreeWeekCalendar(
         
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Week 1
-        Row(modifier = Modifier.fillMaxWidth()) {
-            for (i in 0..6) {
-                DayItem(
-                    millis = days[i],
-                    isSelected = isSameDay(days[i], selectedDate),
-                    isToday = isSameDay(days[i], today),
-                    isPast = days[i] < today,
-                    hasAppointments = allAppointments.any { isSameDay(it.dateTime, days[i]) },
-                    onClick = { onDateSelected(days[i]) },
-                    modifier = Modifier.weight(1f)
-                )
+        for (w in 0..2) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                for (i in (w * 7) until ((w + 1) * 7)) {
+                    DayItem(
+                        millis = days[i],
+                        isSelected = isSameDay(days[i], selectedDate),
+                        isToday = isSameDay(days[i], today),
+                        isPast = days[i] < today,
+                        hasAppointments = allAppointments.any { isSameDay(it.dateTime, days[i]) },
+                        onClick = { onDateSelected(days[i]) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        // Week 2
-        Row(modifier = Modifier.fillMaxWidth()) {
-            for (i in 7..13) {
-                DayItem(
-                    millis = days[i],
-                    isSelected = isSameDay(days[i], selectedDate),
-                    isToday = isSameDay(days[i], today),
-                    isPast = days[i] < today,
-                    hasAppointments = allAppointments.any { isSameDay(it.dateTime, days[i]) },
-                    onClick = { onDateSelected(days[i]) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        // Week 3
-        Row(modifier = Modifier.fillMaxWidth()) {
-            for (i in 14..20) {
-                DayItem(
-                    millis = days[i],
-                    isSelected = isSameDay(days[i], selectedDate),
-                    isToday = isSameDay(days[i], today),
-                    isPast = days[i] < today,
-                    hasAppointments = allAppointments.any { isSameDay(it.dateTime, days[i]) },
-                    onClick = { onDateSelected(days[i]) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            if (w < 2) Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
@@ -261,12 +281,12 @@ fun DayItem(
                     .size(4.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary
+                        if (isSelected) MaterialTheme.colorScheme.onPrimary
                         else MaterialTheme.colorScheme.primary.copy(alpha = if (isPast) 0.38f else 1f)
                     )
             )
         } else {
-            Spacer(modifier = Modifier.size(6.dp)) // Maintain alignment
+            Spacer(modifier = Modifier.size(6.dp))
         }
     }
 }

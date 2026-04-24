@@ -9,6 +9,7 @@ import com.terminplaner.domain.repository.AppointmentRepository
 import com.terminplaner.domain.repository.TaskRepository
 import com.terminplaner.util.AlarmScheduler
 import com.terminplaner.util.DataExportManager
+import com.terminplaner.util.MLManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -24,7 +25,8 @@ data class TaskEditUiState(
     val appointments: List<Appointment> = emptyList(),
     val isEditMode: Boolean = false,
     val isSaved: Boolean = false,
-    val titleError: Boolean = false
+    val titleError: Boolean = false,
+    val suggestedReminderTime: Long? = null
 )
 
 @HiltViewModel
@@ -33,6 +35,7 @@ class TaskEditViewModel @Inject constructor(
     private val appointmentRepository: AppointmentRepository,
     private val alarmScheduler: AlarmScheduler,
     private val dataExportManager: DataExportManager,
+    private val mlManager: MLManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -52,22 +55,31 @@ class TaskEditViewModel @Inject constructor(
             }
         }
 
+        if (taskId > 0) {
+            loadTask(taskId)
+        }
+    }
+
+    fun loadTask(id: Long) {
         viewModelScope.launch {
-            if (taskId > 0) {
-                taskRepository.getTaskById(taskId)?.let { task ->
-                    _uiState.update {
-                        it.copy(
-                            id = task.id,
-                            title = task.title,
-                            description = task.description ?: "",
-                            isCompleted = task.isCompleted,
-                            appointmentId = task.appointmentId,
-                            reminderTime = task.reminderTime
-                        )
-                    }
+            taskRepository.getTaskById(id)?.let { task ->
+                _uiState.update {
+                    it.copy(
+                        id = task.id,
+                        title = task.title,
+                        description = task.description ?: "",
+                        isCompleted = task.isCompleted,
+                        appointmentId = task.appointmentId,
+                        reminderTime = task.reminderTime,
+                        isEditMode = true
+                    )
                 }
             }
         }
+    }
+
+    fun setInitialAppointment(appointmentId: Long?) {
+        _uiState.update { it.copy(appointmentId = appointmentId) }
     }
 
     fun updateReminderTime(time: Long?) {
@@ -76,6 +88,20 @@ class TaskEditViewModel @Inject constructor(
 
     fun updateTitle(title: String) {
         _uiState.update { it.copy(title = title, titleError = false) }
+        checkForSuggestions(title)
+    }
+
+    private fun checkForSuggestions(text: String) {
+        viewModelScope.launch {
+            val dateTime = mlManager.extractDateTime(text)
+            _uiState.update { it.copy(suggestedReminderTime = dateTime) }
+        }
+    }
+
+    fun applySuggestion() {
+        val suggestion = _uiState.value.suggestedReminderTime ?: return
+        updateReminderTime(suggestion)
+        _uiState.update { it.copy(suggestedReminderTime = null) }
     }
 
     fun updateDescription(description: String) {

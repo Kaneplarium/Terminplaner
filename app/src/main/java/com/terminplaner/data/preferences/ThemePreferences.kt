@@ -25,6 +25,8 @@ class ThemePreferences @Inject constructor(@ApplicationContext private val conte
         val DARK_MODE_KEY = intPreferencesKey("dark_mode")
         val IS_FIRST_RUN_KEY = booleanPreferencesKey("is_first_run")
         val STORAGE_PATH_KEY = stringPreferencesKey("storage_path")
+        val DYNAMIC_COLOR_KEY = booleanPreferencesKey("dynamic_color")
+        val USER_NAME_KEY = stringPreferencesKey("user_name")
         private const val DEFAULT_COLOR = 0xFFE53935 // Red
         const val MODE_SYSTEM = 0
         const val MODE_LIGHT = 1
@@ -45,6 +47,14 @@ class ThemePreferences @Inject constructor(@ApplicationContext private val conte
 
     val storagePath: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[STORAGE_PATH_KEY]
+    }
+
+    val dynamicColor: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[DYNAMIC_COLOR_KEY] ?: true
+    }
+
+    val userName: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[USER_NAME_KEY]
     }
 
     suspend fun setThemeColor(color: Long) {
@@ -71,6 +81,22 @@ class ThemePreferences @Inject constructor(@ApplicationContext private val conte
                 preferences.remove(STORAGE_PATH_KEY)
             } else {
                 preferences[STORAGE_PATH_KEY] = path
+            }
+        }
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[DYNAMIC_COLOR_KEY] = enabled
+        }
+    }
+
+    suspend fun setUserName(name: String?) {
+        context.dataStore.edit { preferences ->
+            if (name == null) {
+                preferences.remove(USER_NAME_KEY)
+            } else {
+                preferences[USER_NAME_KEY] = name
             }
         }
     }

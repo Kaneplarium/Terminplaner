@@ -2,6 +2,7 @@ package com.terminplaner.ui.tasks
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.terminplaner.data.preferences.ThemePreferences
 import com.terminplaner.domain.model.Appointment
 import com.terminplaner.domain.model.Task
 import com.terminplaner.domain.repository.AppointmentRepository
@@ -15,6 +16,7 @@ import javax.inject.Inject
 data class TasksListUiState(
     val tasks: List<Task> = emptyList(),
     val appointments: List<Appointment> = emptyList(),
+    val userName: String? = null,
     val isLoading: Boolean = false
 )
 
@@ -22,6 +24,7 @@ data class TasksListUiState(
 class TasksListViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val appointmentRepository: AppointmentRepository,
+    private val themePreferences: ThemePreferences,
     private val dataExportManager: DataExportManager
 ) : ViewModel() {
 
@@ -32,11 +35,13 @@ class TasksListViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 taskRepository.getAllTasks(),
-                appointmentRepository.getAllAppointments()
-            ) { tasks, appointments ->
+                appointmentRepository.getAllAppointments(),
+                themePreferences.userName
+            ) { tasks, appointments, userName ->
                 TasksListUiState(
                     tasks = tasks,
-                    appointments = appointments
+                    appointments = appointments,
+                    userName = userName
                 )
             }.collect { newState ->
                 _uiState.value = newState

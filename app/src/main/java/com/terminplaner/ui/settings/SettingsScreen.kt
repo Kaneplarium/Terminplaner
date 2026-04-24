@@ -26,6 +26,7 @@ import com.terminplaner.data.preferences.ThemePreferences
 import com.terminplaner.ui.components.AppTopBar
 import com.terminplaner.ui.navigation.Screen
 import com.terminplaner.ui.theme.*
+import com.terminplaner.util.DndManager
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -38,7 +39,13 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val themeColor by viewModel.themeColor.collectAsState()
     val darkThemeMode by viewModel.darkThemeMode.collectAsState()
+    val dynamicColor by viewModel.dynamicColor.collectAsState()
+    val userName by viewModel.userName.collectAsState()
     val context = LocalContext.current
+    val dndManager = remember { DndManager(context) }
+
+    var showNameDialog by remember { mutableStateOf(false) }
+    var nameInput by remember(userName) { mutableStateOf(userName ?: "") }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -72,6 +79,15 @@ fun SettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
+            ListItem(
+                headlineContent = { Text("Dein Name") },
+                supportingContent = { Text(userName ?: "Nicht festgelegt") },
+                leadingContent = { Icon(Icons.Default.Person, contentDescription = null) },
+                modifier = Modifier.clickable { showNameDialog = true }
+            )
+
+            Divider()
+
             ListItem(
                 headlineContent = { Text("Papierkorb") },
                 supportingContent = { Text("Gelöschte Termine anzeigen") },
@@ -156,40 +172,53 @@ fun SettingsScreen(
                 }
             )
 
-            Text(
-                text = "Designfarbe",
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(16.dp),
-                color = MaterialTheme.colorScheme.primary
-            )
+            if (!dndManager.hasPermission()) {
+                ListItem(
+                    headlineContent = { Text("Fokus-Modus Berechtigung") },
+                    supportingContent = { Text("Erforderlich für automatischen 'Bitte nicht stören' Modus") },
+                    leadingContent = { Icon(Icons.Default.PriorityHigh, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                    modifier = Modifier.clickable { dndManager.requestPermission() }
+                )
+            }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                val colors = listOf(Red, Yellow, Green, Blue, Pink)
-                colors.forEach { color ->
-                    val colorLong = color.toArgb().toLong()
-                    val isSelected = themeColor == colorLong
-                    Surface(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clickable { viewModel.setThemeColor(colorLong) },
-                        shape = CircleShape,
-                        color = color,
-                        border = if (isSelected) {
-                            androidx.compose.foundation.BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface)
-                        } else null
-                    ) {
-                        if (isSelected) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.padding(10.dp)
-                            )
+            // Note: Dynamic Colors toggle is kept in background but not shown in UI as requested
+            
+            if (!dynamicColor) {
+                Text(
+                    text = "Designfarbe",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    val colors = listOf(Red, Yellow, Green, Blue, Pink)
+                    colors.forEach { color ->
+                        val colorLong = color.toArgb().toLong()
+                        val isSelected = themeColor == colorLong
+                        Surface(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clickable { viewModel.setThemeColor(colorLong) },
+                            shape = CircleShape,
+                            color = color,
+                            border = if (isSelected) {
+                                androidx.compose.foundation.BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface)
+                            } else null
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.padding(10.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -198,7 +227,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.weight(1f))
             
             Text(
-                text = "Version 2026.04.23.20.58",
+                text = "Version 2026.04.23.18.24",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
@@ -220,5 +249,33 @@ fun SettingsScreen(
                 containerColor = MaterialTheme.colorScheme.error
             ) { Text(uiState.error!!) }
         }
+    }
+
+    if (showNameDialog) {
+        AlertDialog(
+            onDismissRequest = { showNameDialog = false },
+            title = { Text("Name ändern") },
+            text = {
+                OutlinedTextField(
+                    value = nameInput,
+                    onValueChange = { nameInput = it },
+                    label = { Text("Dein Name") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setUserName(nameInput)
+                    showNameDialog = false
+                }) {
+                    Text("Speichern")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNameDialog = false }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
     }
 }

@@ -9,6 +9,7 @@ import com.terminplaner.domain.repository.AppointmentRepository
 import com.terminplaner.domain.repository.CategoryRepository
 import com.terminplaner.util.AlarmScheduler
 import com.terminplaner.util.DataExportManager
+import com.terminplaner.util.MLManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -25,13 +26,15 @@ data class AppointmentEditUiState(
     val endDateTime: Long = System.currentTimeMillis() + 3600000, // + 1 hour
     val categoryId: Long? = null,
     val color: Int? = null,
+    val isFocusMode: Boolean = false,
     val categories: List<Category> = emptyList(),
     val isEditMode: Boolean = false,
     val isSaved: Boolean = false,
     val titleError: Boolean = false,
     val hasOverlap: Boolean = false,
     val showOverlapDialog: Boolean = false,
-    val isPastDateError: Boolean = false
+    val isPastDateError: Boolean = false,
+    val suggestedDateTime: Long? = null
 )
 
 @HiltViewModel
@@ -40,6 +43,7 @@ class AppointmentEditViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository,
     private val alarmScheduler: AlarmScheduler,
     private val dataExportManager: DataExportManager,
+    private val mlManager: MLManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -70,7 +74,8 @@ class AppointmentEditViewModel @Inject constructor(
                             dateTime = appointment.dateTime,
                             endDateTime = appointment.endDateTime,
                             categoryId = appointment.categoryId,
-                            color = appointment.color
+                            color = appointment.color,
+                            isFocusMode = appointment.isFocusMode
                         )
                     }
                     checkForOverlap()
@@ -97,7 +102,32 @@ class AppointmentEditViewModel @Inject constructor(
 
     fun updateTitle(title: String) {
         _uiState.update { it.copy(title = title, titleError = false) }
+        checkForSuggestions(title)
         autoSave()
+    }
+
+    private fun checkForSuggestions(text: String) {
+        viewModelScope.launch {
+            val dateTime = mlManager.extractDateTime(text)
+            _uiState.update { it.copy(suggestedDateTime = dateTime) }
+        }
+    }
+
+    fun applySuggestion() {
+        val suggestion = _uiState.value.suggestedDateTime ?: return
+        updateDateTime(suggestion)
+        _uiState.update { it.copy(suggestedDateTime = null) }
+    }
+
+    fun processFlyer(bitmap: android.graphics.Bitmap) {
+        viewModelScope.launch {
+            val text = mlManager.recognizeText(bitmap) ?: return@launch
+            _uiState.update { it.copy(description = text) }
+            val dateTime = mlManager.extractDateTime(text)
+            if (dateTime != null) {
+                _uiState.update { it.copy(suggestedDateTime = dateTime) }
+            }
+        }
     }
 
     fun updateDescription(description: String) {
@@ -166,6 +196,11 @@ class AppointmentEditViewModel @Inject constructor(
         autoSave()
     }
 
+    fun updateFocusMode(isFocus: Boolean) {
+        _uiState.update { it.copy(isFocusMode = isFocus) }
+        autoSave()
+    }
+
     private var saveJob: kotlinx.coroutines.Job? = null
 
     private fun autoSave() {
@@ -185,7 +220,8 @@ class AppointmentEditViewModel @Inject constructor(
                 dateTime = state.dateTime,
                 endDateTime = state.endDateTime,
                 categoryId = state.categoryId,
-                color = state.color
+                color = state.color,
+                isFocusMode = state.isFocusMode
             )
 
             if (state.isEditMode) {

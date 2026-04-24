@@ -11,7 +11,7 @@ import com.terminplaner.data.local.entity.TaskEntity
 
 @Database(
     entities = [AppointmentEntity::class, CategoryEntity::class, TaskEntity::class],
-    version = 5,
+    version = 7,
     exportSchema = false
 )
 abstract class TerminPlanerDatabase : RoomDatabase() {

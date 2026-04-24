@@ -41,13 +41,40 @@ class NotificationReceiver : BroadcastReceiver() {
                     snoozeTask(context, taskId, minutes.toLong())
                 }
             }
-            else -> {
-                val title = intent.getStringExtra("title") ?: "Termin"
-                val message = intent.getStringExtra("message") ?: "Du hast einen anstehenden Termin."
+            "ACTION_DONE_TASK" -> {
+                val taskId = intent.getLongExtra("taskId", -1L)
+                if (taskId != -1L) {
+                    markTaskDone(context, taskId)
+                }
+            }
+            "ACTION_SNOOZE_APPOINTMENT" -> {
                 val appointmentId = intent.getLongExtra("appointmentId", -1L)
-
+                val minutes = intent.getIntExtra("snooze_minutes", 15)
                 if (appointmentId != -1L) {
-                    NotificationHelper(context).showNotification(title, message, appointmentId)
+                    snoozeAppointment(context, appointmentId, minutes.toLong())
+                }
+            }
+            "ACTION_DONE_APPOINTMENT" -> {
+                val appointmentId = intent.getLongExtra("appointmentId", -1L)
+                if (appointmentId != -1L) {
+                    markAppointmentDone(context, appointmentId)
+                }
+            }
+            "ACTION_START_FOCUS_MODE" -> {
+                DndManager(context).setDndMode(true)
+            }
+            "ACTION_END_FOCUS_MODE" -> {
+                DndManager(context).setDndMode(false)
+            }
+            else -> {
+                if (intent.action == "ACTION_APPOINTMENT_REMINDER" || intent.action == null) {
+                    val title = intent.getStringExtra("title") ?: "Termin"
+                    val message = intent.getStringExtra("message") ?: "Du hast einen anstehenden Termin."
+                    val appointmentId = intent.getLongExtra("appointmentId", -1L)
+
+                    if (appointmentId != -1L) {
+                        NotificationHelper(context).showNotification(title, message, appointmentId)
+                    }
                 }
             }
         }
@@ -65,6 +92,43 @@ class NotificationReceiver : BroadcastReceiver() {
             
             taskRepository.updateTask(updatedTask)
             AlarmScheduler(context).scheduleTaskReminder(updatedTask)
+        }
+    }
+
+    private fun markTaskDone(context: Context, taskId: Long) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel((taskId + 1000000).toInt())
+
+        CoroutineScope(Dispatchers.IO).launch {
+            taskRepository.toggleTaskCompletion(taskId, true)
+        }
+    }
+
+    private fun snoozeAppointment(context: Context, appointmentId: Long, minutes: Long) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(appointmentId.toInt())
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val appointment = appointmentRepository.getAppointmentById(appointmentId) ?: return@launch
+            val snoozeTime = System.currentTimeMillis() + (minutes * 60 * 1000)
+            val updatedAppointment = appointment.copy(dateTime = snoozeTime)
+            
+            // We don't update the appointment in DB to keep original time, 
+            // but we schedule a new one-time alarm.
+            // Or maybe we should update it? Usually snooze just reschedules the notification.
+            // Let's just reschedule the notification using a temporary alarm action.
+            val scheduler = AlarmScheduler(context)
+            scheduler.schedule(updatedAppointment) 
+        }
+    }
+
+    private fun markAppointmentDone(context: Context, appointmentId: Long) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(appointmentId.toInt())
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val appointment = appointmentRepository.getAppointmentById(appointmentId) ?: return@launch
+            appointmentRepository.updateAppointment(appointment.copy(isCompleted = true))
         }
     }
 

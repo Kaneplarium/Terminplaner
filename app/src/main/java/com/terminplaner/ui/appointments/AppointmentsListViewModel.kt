@@ -2,6 +2,7 @@ package com.terminplaner.ui.appointments
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.terminplaner.data.preferences.ThemePreferences
 import com.terminplaner.domain.model.Appointment
 import com.terminplaner.domain.model.Category
 import com.terminplaner.domain.repository.AppointmentRepository
@@ -15,6 +16,7 @@ import javax.inject.Inject
 data class AppointmentsListUiState(
     val appointments: List<Appointment> = emptyList(),
     val categories: List<Category> = emptyList(),
+    val userName: String? = null,
     val isLoading: Boolean = false
 )
 
@@ -22,6 +24,7 @@ data class AppointmentsListUiState(
 class AppointmentsListViewModel @Inject constructor(
     private val appointmentRepository: AppointmentRepository,
     private val categoryRepository: CategoryRepository,
+    private val themePreferences: ThemePreferences,
     private val dataExportManager: DataExportManager
 ) : ViewModel() {
 
@@ -32,11 +35,13 @@ class AppointmentsListViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 appointmentRepository.getAllAppointments(),
-                categoryRepository.getAllCategories()
-            ) { appointments, categories ->
+                categoryRepository.getAllCategories(),
+                themePreferences.userName
+            ) { appointments, categories, userName ->
                 AppointmentsListUiState(
                     appointments = appointments,
                     categories = categories,
+                    userName = userName,
                     isLoading = false
                 )
             }.collect { state ->

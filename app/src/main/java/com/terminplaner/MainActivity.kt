@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val themeColorLong by settingsViewModel.themeColor.collectAsState()
             val darkThemeMode by settingsViewModel.darkThemeMode.collectAsState()
+            val dynamicColor by settingsViewModel.dynamicColor.collectAsState()
             val isFirstRun by settingsViewModel.isFirstRun.collectAsState()
             
             var showOnboarding by remember { mutableStateOf(false) }
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
             
             TerminePlanerTheme(
                 darkTheme = useDarkTheme,
+                dynamicColor = dynamicColor,
                 primaryColor = Color(themeColorLong)
             ) {
                 Surface(
@@ -78,7 +80,7 @@ class MainActivity : ComponentActivity() {
                     if (showOnboarding) {
                         OnboardingScreen(onFinished = { showOnboarding = false })
                     } else {
-                        AppNavigation()
+                        AppNavigation(intentAction = intent.action, intentShortcut = intent.getStringExtra("shortcut"))
                     }
                 }
             }

@@ -47,17 +47,51 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
-            .build()
+
+        // Add "Erledigt" action
+        val doneIntent = Intent(context, NotificationReceiver::class.java).apply {
+            action = "ACTION_DONE_APPOINTMENT"
+            putExtra("appointmentId", appointmentId)
+        }
+        val donePendingIntent = PendingIntent.getBroadcast(
+            context,
+            (appointmentId + 4000000).toInt(),
+            doneIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        builder.addAction(
+            android.R.drawable.ic_menu_view,
+            "Erledigt",
+            donePendingIntent
+        )
+
+        // Add "15 Min" snooze action
+        val snoozeIntent = Intent(context, NotificationReceiver::class.java).apply {
+            action = "ACTION_SNOOZE_APPOINTMENT"
+            putExtra("appointmentId", appointmentId)
+            putExtra("snooze_minutes", 15)
+        }
+        val snoozePendingIntent = PendingIntent.getBroadcast(
+            context,
+            (appointmentId + 5000000).toInt(),
+            snoozeIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        builder.addAction(
+            android.R.drawable.ic_menu_recent_history,
+            "15 Min",
+            snoozePendingIntent
+        )
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(appointmentId.toInt(), notification)
+        manager.notify(appointmentId.toInt(), builder.build())
     }
 
     fun showTaskNotification(title: String, message: String, taskId: Long) {
@@ -79,6 +113,23 @@ class NotificationHelper(private val context: Context) {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+
+        // Add "Erledigt" action for tasks
+        val doneIntent = Intent(context, NotificationReceiver::class.java).apply {
+            action = "ACTION_DONE_TASK"
+            putExtra("taskId", taskId)
+        }
+        val donePendingIntent = PendingIntent.getBroadcast(
+            context,
+            (taskId + 6000000).toInt(),
+            doneIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        builder.addAction(
+            android.R.drawable.ic_menu_view,
+            "Erledigt",
+            donePendingIntent
+        )
 
         // Add snooze actions
         listOf(15, 30, 60).forEach { minutes ->

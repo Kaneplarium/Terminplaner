@@ -37,7 +37,7 @@ sealed class BottomNavItem(
     val icon: ImageVector
 ) {
     data object Calendar : BottomNavItem("calendar", "Kalender", Icons.Default.CalendarToday)
-    data object Appointments : BottomNavItem("appointments_list", "Terminübersicht", Icons.Default.Event)
+    data object Appointments : BottomNavItem("appointments_list", "Termine", Icons.Default.Event)
     data object Tasks : BottomNavItem("tasks_list", "Aufgaben", Icons.Default.CheckCircle)
     data object Settings : BottomNavItem("settings", "Einstellungen", Icons.Default.Settings)
 }

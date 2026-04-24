@@ -2,6 +2,7 @@ package com.terminplaner.ui.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.terminplaner.data.preferences.ThemePreferences
 import com.terminplaner.domain.model.Appointment
 import com.terminplaner.domain.model.Category
 import com.terminplaner.domain.repository.AppointmentRepository
@@ -20,6 +21,7 @@ data class CalendarUiState(
     val allAppointments: List<Appointment> = emptyList(),
     val categories: List<Category> = emptyList(),
     val selectedCategoryId: Long? = null,
+    val userName: String? = null,
     val isLoading: Boolean = false
 )
 
@@ -27,6 +29,7 @@ data class CalendarUiState(
 class CalendarViewModel @Inject constructor(
     private val appointmentRepository: AppointmentRepository,
     private val categoryRepository: CategoryRepository,
+    private val themePreferences: ThemePreferences,
     private val dataExportManager: DataExportManager
 ) : ViewModel() {
 
@@ -56,12 +59,22 @@ class CalendarViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             combine(
-                _selectedDate,
-                _currentMonth,
-                categoryRepository.getAllCategories(),
-                appointmentRepository.getAllAppointments(),
-                _selectedCategoryId
-            ) { date, month, categories, allAppointments, selectedCatId ->
+                listOf(
+                    _selectedDate,
+                    _currentMonth,
+                    categoryRepository.getAllCategories(),
+                    appointmentRepository.getAllAppointments(),
+                    _selectedCategoryId,
+                    themePreferences.userName
+                )
+            ) { array ->
+                val date = array[0] as Long
+                val month = array[1] as Long
+                val categories = array[2] as List<Category>
+                val allAppointments = array[3] as List<Appointment>
+                val selectedCatId = array[4] as Long?
+                val userName = array[5] as String?
+
                 val calendar = Calendar.getInstance().apply {
                     timeInMillis = date
                     set(Calendar.HOUR_OF_DAY, 0)
@@ -89,7 +102,8 @@ class CalendarViewModel @Inject constructor(
                     appointments = dayAppointments,
                     allAppointments = filteredAll,
                     categories = categories,
-                    selectedCategoryId = selectedCatId
+                    selectedCategoryId = selectedCatId,
+                    userName = userName
                 )
             }.collect { newState ->
                 _uiState.value = newState
@@ -103,6 +117,32 @@ class CalendarViewModel @Inject constructor(
 
     fun selectDate(date: Long) {
         _selectedDate.value = date
+    }
+
+    fun goToToday() {
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        _selectedDate.value = today
+    }
+
+    fun nextWeek() {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = _selectedDate.value
+            add(Calendar.DAY_OF_YEAR, 7)
+        }
+        _selectedDate.value = calendar.timeInMillis
+    }
+
+    fun previousWeek() {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = _selectedDate.value
+            add(Calendar.DAY_OF_YEAR, -7)
+        }
+        _selectedDate.value = calendar.timeInMillis
     }
 
     fun setCurrentMonth(month: Long) {

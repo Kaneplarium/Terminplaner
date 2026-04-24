@@ -28,7 +28,7 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     var step by remember { mutableIntStateOf(0) }
-    val totalSteps = 5
+    val totalSteps = 6
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -50,10 +50,14 @@ fun OnboardingScreen(
                 ) { targetStep ->
                     when (targetStep) {
                         0 -> WelcomeStep()
-                        1 -> FeaturesStep()
-                        2 -> ColorStep(onColorSelect = { viewModel.setThemeColor(it) })
-                        3 -> StorageStep(onPathSelect = { viewModel.setStoragePath(it) })
-                        4 -> PermissionStep()
+                        1 -> NameStep(onNameChange = { viewModel.setUserName(it) })
+                        2 -> FeaturesStep()
+                        3 -> ColorStep(
+                            onColorSelect = { viewModel.setThemeColor(it) },
+                            onDynamicToggle = { viewModel.setDynamicColor(it) }
+                        )
+                        4 -> StorageStep(onPathSelect = { viewModel.setStoragePath(it) })
+                        5 -> PermissionStep()
                     }
                 }
             }
@@ -123,6 +127,37 @@ fun WelcomeStep() {
 }
 
 @Composable
+fun NameStep(onNameChange: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "Wie heißt du?",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Wir würden dich gerne persönlich begrüßen.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(32.dp))
+        
+        OutlinedTextField(
+            value = name,
+            onValueChange = { 
+                name = it
+                onNameChange(it)
+            },
+            label = { Text("Dein Name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
 fun FeaturesStep() {
     Column(
         horizontalAlignment = Alignment.Start,
@@ -180,8 +215,9 @@ fun FeatureItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title: St
 }
 
 @Composable
-fun ColorStep(onColorSelect: (Long) -> Unit) {
+fun ColorStep(onColorSelect: (Long) -> Unit, onDynamicToggle: (Boolean) -> Unit) {
     var selectedColor by remember { mutableLongStateOf(0xFFE53935) } // Default Red
+    var dynamicEnabled by remember { mutableStateOf(true) } // Default true and hidden
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
@@ -190,12 +226,16 @@ fun ColorStep(onColorSelect: (Long) -> Unit) {
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(16.dp))
+        
+        // Note: Dynamic Colors toggle is kept in background but not shown in UI as requested
+        // It remains 'true' by default.
+
         Text(
-            text = "Wähle eine Akzentfarbe, die dir gefällt.",
+            text = "Wähle eine Akzentfarbe für den Fall, dass keine Systemfarben verfügbar sind:",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
         
         Row(
             modifier = Modifier.fillMaxWidth(),
