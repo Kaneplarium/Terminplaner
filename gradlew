@@ -143,6 +143,8 @@ eval set -- \
         "-Dorg.gradle.appname=$APP_BASE_NAME" \
         -classpath "$CLASSPATH" \
         org.gradle.wrapper.GradleWrapperMain \
+        # shellcheck disable=SC1126
+        # shellcheck disable=SC2294
         "$@"
 
 exec "$JAVACMD" "$@"
