@@ -32,7 +32,7 @@ fun FeaturesScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "Was bietet TerminePlaner?",
+                text = "Was bietet Terminplaner?",
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(bottom = 16.dp)
             )

@@ -151,7 +151,7 @@ fun SettingsScreen(
                 modifier = Modifier.clickable {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                         data = Uri.parse("mailto:kontakt@kaneplarium.com")
-                        putExtra(Intent.EXTRA_SUBJECT, "TerminePlaner Feedback")
+                        putExtra(Intent.EXTRA_SUBJECT, "Terminplaner Feedback")
                     }
                     context.startActivity(Intent.createChooser(intent, "Email senden"))
                 }
@@ -257,7 +257,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.weight(1f))
             
             Text(
-                text = "Version 2026.04.25.00.55",
+                text = "Version 2026.04.26.00.50",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),

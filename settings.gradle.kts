@@ -17,5 +17,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TerminePlaner"
+rootProject.name = "Terminplaner"
 include(":app")

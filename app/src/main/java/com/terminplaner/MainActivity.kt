@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import com.terminplaner.data.preferences.ThemePreferences
 import com.terminplaner.ui.navigation.AppNavigation
-import com.terminplaner.ui.theme.TerminePlanerTheme
+import com.terminplaner.ui.theme.TerminplanerTheme
 import com.terminplaner.ui.settings.SettingsViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
                 else -> isSystemInDarkTheme()
             }
             
-            TerminePlanerTheme(
+            TerminplanerTheme(
                 darkTheme = useDarkTheme,
                 dynamicColor = dynamicColor,
                 primaryColor = Color(themeColorLong)

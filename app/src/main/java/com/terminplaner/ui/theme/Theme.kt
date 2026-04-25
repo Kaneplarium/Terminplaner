@@ -43,7 +43,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun TerminePlanerTheme(
+fun TerminplanerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     primaryColor: Color = Blue,
